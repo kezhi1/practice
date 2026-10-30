@@ -879,3 +879,132 @@ select:focus,
   width: auto;
   min-width: 160px;
 }
+
+/* ---------- 导入页写法小抄 ---------- */
+.tips {
+  margin: 0 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  padding: 10px 14px;
+}
+.tips summary {
+  cursor: pointer;
+  font-size: 13.5px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  list-style: none;
+}
+.tips summary::-webkit-details-marker {
+  display: none;
+}
+.tips summary:hover {
+  color: var(--primary);
+}
+.tips-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 700;
+}
+.tips-body {
+  margin-top: 12px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.tips-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.tips-table th {
+  text-align: left;
+  white-space: nowrap;
+  padding: 6px 12px 6px 0;
+  color: var(--muted);
+  font-weight: 500;
+  vertical-align: top;
+}
+.tips-table td {
+  padding: 6px 0;
+  line-height: 1.9;
+}
+.tips-table code {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 1px 5px;
+  margin: 0 2px;
+}
+
+/* ---------- 练习历史 ---------- */
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin: 14px 0 18px;
+}
+.stat {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.stat-num {
+  font-size: 24px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+.select.auto {
+  width: auto;
+  min-width: 160px;
+}
+.history-list {
+  display: grid;
+  gap: 10px;
+}
+.history-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.history-main {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+.history-score {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.score {
+  font-size: 20px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.score.good {
+  color: var(--green);
+}
+.score.mid {
+  color: var(--amber, #d9a020);
+}
+.score.low {
+  color: var(--red, #e5484d);
+}
+@media (max-width: 760px) {
+  .stat-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

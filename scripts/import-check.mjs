@@ -29,6 +29,19 @@ C. MySQL
 答案：AB
 `
 
+const strictBad = `## 单选题却写了两个答案
+- A. 甲
+- B. 乙
+- C. 丙
+> 答案：A,B
+> 类型：单选
+
+## 这题是好的
+- A. 甲
+- B. 乙
+答案 A
+`
+
 const browser = await puppeteer.launch({
   executablePath: EDGE,
   headless: 'new',
@@ -55,6 +68,10 @@ async function importOnce(md, name) {
     setter.call(ta, value)
     ta.dispatchEvent(new Event('input', { bubbles: true }))
   }, md)
+  await page.evaluate(() => {
+    const details = document.querySelector('details.tips')
+    if (details) details.open = true
+  })
   await new Promise((r) => setTimeout(r, 600))
   await page.screenshot({ path: `docs/shots/${name}.png`, fullPage: true })
   const text = await page.evaluate(() => {
@@ -68,5 +85,7 @@ console.log('--- 宽容写法 ---')
 console.log(await importOnce(sloppy, '11-tolerant-preview'))
 console.log('--- 无标题编号写法 ---')
 console.log(await importOnce(numbered, '12-numbered-preview'))
+console.log('--- 严格模式下的歧义写法 ---')
+console.log(await importOnce(strictBad, '13-strict-error'))
 console.log('errors', errors)
 await browser.close()

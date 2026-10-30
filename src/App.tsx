@@ -6,15 +6,17 @@ import ImportView from './views/ImportView'
 import BankDetail from './views/BankDetail'
 import Quiz, { type QuizSource } from './views/Quiz'
 import Result from './views/Result'
+import History from './views/History'
 import WrongBook from './views/WrongBook'
 
 export type View =
   | { name: 'banks' }
   | { name: 'import' }
   | { name: 'wrong' }
+  | { name: 'history' }
   | { name: 'detail'; bankId: string }
   | { name: 'quiz'; source: QuizSource }
-  | { name: 'result'; session: Session }
+  | { name: 'result'; session: Session; fromHistory?: boolean }
 
 export default function App() {
   const [view, setView] = useState<View>({ name: 'banks' })
@@ -47,6 +49,12 @@ export default function App() {
             错题本
             {wrongCount > 0 && <span className="nav-count">{wrongCount}</span>}
           </button>
+          <button
+            className={`btn ghost ${view.name === 'history' ? 'is-active' : ''}`}
+            onClick={() => setView({ name: 'history' })}
+          >
+            练习历史
+          </button>
           <button className="btn ghost" onClick={toBanks}>
             知识库
           </button>
@@ -75,6 +83,12 @@ export default function App() {
             onBack={toBanks}
             onPractice={() => setView({ name: 'quiz', source: { kind: 'wrong' } })}
             onOpenBank={(bankId) => setView({ name: 'detail', bankId })}
+          />
+        )}
+        {view.name === 'history' && (
+          <History
+            onBack={toBanks}
+            onOpen={(session) => setView({ name: 'result', session, fromHistory: true })}
           />
         )}
         {view.name === 'detail' && (
@@ -107,8 +121,20 @@ export default function App() {
                     : { kind: 'bank', bankId: view.session.bankId },
               })
             }
-            onBack={() => (view.session.bankId === WRONG_BANK_ID ? toWrong() : toBanks())}
-            backLabel={view.session.bankId === WRONG_BANK_ID ? '返回错题本' : '返回知识库'}
+            onBack={() =>
+              view.fromHistory
+                ? setView({ name: 'history' })
+                : view.session.bankId === WRONG_BANK_ID
+                  ? toWrong()
+                  : toBanks()
+            }
+            backLabel={
+              view.fromHistory
+                ? '返回练习历史'
+                : view.session.bankId === WRONG_BANK_ID
+                  ? '返回错题本'
+                  : '返回知识库'
+            }
           />
         )}
       </main>

@@ -103,11 +103,10 @@ describe('解析：各种宽容写法', () => {
     expect(r.questions[0].options).toHaveLength(2)
   })
 
-  it('> 类型：多选 可以显式指定题型', () => {
-    const r = ok(`## q\n- A. 甲\n- B. 乙\n- C. 丙\n> 答案：A\n> 类型：多选`)
-    // 只有一个答案却声明多选：给出 warn，但仍然导入
+  it('> 类型：多选 可以显式指定题型（答案个数要匹配）', () => {
+    const r = ok(`## q\n- A. 甲\n- B. 乙\n- C. 丙\n> 答案：A,B\n> 类型：多选`)
     expect(r.questions[0].type).toBe('multiple')
-    expect(r.issues.some((i) => i.level === 'warn')).toBe(true)
+    expect(r.questions[0].answer).toEqual(['A', 'B'])
   })
 
   it('解析行可以写多行，也接受 分析：', () => {
@@ -146,5 +145,32 @@ describe('解析：报错与边界', () => {
     const md = '\uFEFF## 题干\r\n- A. 甲\r\n- B. 乙\r\n> 答案：B\r\n'
     const r = ok(md)
     expect(r.questions[0].answer).toEqual(['B'])
+  })
+})
+
+describe('解析：有疑问就拒收（严格模式）', () => {
+  it('标成单选却给多个答案 → 报错，不擅自改成多选', () => {
+    const r = parseMarkdown(`## q\n- A. 甲\n- B. 乙\n- C. 丙\n> 答案：A,B\n> 类型：单选`, 'T')
+    expect(r.questions).toHaveLength(0)
+    expect(r.issues.some((i) => i.level === 'error' && i.message.includes('单选还是多选'))).toBe(true)
+  })
+
+  it('标成多选却只有一个答案 → 报错', () => {
+    const r = parseMarkdown(`## q\n- A. 甲\n- B. 乙\n> 答案：A\n> 类型：多选`, 'T')
+    expect(r.questions).toHaveLength(0)
+    expect(r.issues.some((i) => i.level === 'error' && i.message.includes('只有一个答案'))).toBe(true)
+  })
+
+  it('不认识的题型 → 报错', () => {
+    const r = parseMarkdown(`## q\n- A. 甲\n- B. 乙\n> 答案：A\n> 类型：填空`, 'T')
+    expect(r.questions).toHaveLength(0)
+    expect(r.issues.some((i) => i.level === 'error' && i.message.includes('不认识的题型'))).toBe(true)
+  })
+
+  it('一题报错不影响其它题导入', () => {
+    const r = parseMarkdown(`## 好题\n- A. 甲\n- B. 乙\n> 答案：A\n\n## 坏题\n- A. 甲\n- B. 乙\n> 答案：C`, 'T')
+    expect(r.questions).toHaveLength(1)
+    expect(r.questions[0].stem).toContain('好题')
+    expect(r.issues.some((i) => i.level === 'error')).toBe(true)
   })
 })

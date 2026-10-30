@@ -125,6 +125,66 @@ export default function ImportView({ onDone, onCancel }: Props) {
         </div>
       </div>
 
+      <details className="tips">
+        <summary>
+          <span className="tips-icon">?</span>
+          写法小抄：一份 Markdown 大概长什么样（点开）
+        </summary>
+        <div className="tips-body">
+          <table className="tips-table">
+            <tbody>
+              <tr>
+                <th>分题</th>
+                <td>
+                  <code>#</code> ~ <code>####</code> 标题；全篇没有标题时按 <code>1.</code> <code>2.</code> 编号分题
+                </td>
+              </tr>
+              <tr>
+                <th>选项</th>
+                <td>
+                  <code>- A. 内容</code> · <code>- A、内容</code> · <code>A. 内容</code> · <code>(A) 内容</code> · <code>- A 内容</code>
+                </td>
+              </tr>
+              <tr>
+                <th>答案</th>
+                <td>
+                  <code>&gt; 答案：A</code> · <code>答案 A</code> · <code>**答案：A**</code> · <code>【答案】A</code> ·
+                  <code>正确答案是 B</code>
+                </td>
+              </tr>
+              <tr>
+                <th>多选</th>
+                <td>
+                  <code>A,C</code> · <code>A、C</code> · <code>A C</code> · 连写 <code>AC</code> 也会自动拆开
+                </td>
+              </tr>
+              <tr>
+                <th>判断</th>
+                <td>
+                  只写 <code>&gt; 答案：对</code> 就行，选项自动补成 <code>A. 正确</code> / <code>B. 错误</code>
+                </td>
+              </tr>
+              <tr>
+                <th>解析 / 难度</th>
+                <td>
+                  <code>解析：…</code>、<code>分析：…</code>、<code>【解析】…</code> 都认，可以写多行；<code>难度：1-5</code>
+                </td>
+              </tr>
+              <tr>
+                <th>代码块</th>
+                <td>
+                  <code>```</code> 里面的 <code>##</code>、<code>- A.</code> 不会被当成新题
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <p className="muted small">
+            底线是不猜：写法有歧义（单选却给了多个答案、题型写错、答案不在选项里）就报错并指出第几行，绝不悄悄改掉；
+            能确定的地方才补全（比如判断题的选项），并且一定在右侧预览里告诉你。
+          </p>
+        </div>
+      </details>
+
       <div className="import-grid">
         <div className="card pad">
           <div

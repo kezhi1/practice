@@ -138,8 +138,11 @@ P0 已完成并跑通（`E:\practice`）：导入 → 解析校验 → 入库 �
 | 错题本（汇总 / 排序 / 已掌握） | ✅ | `src/views/WrongBook.tsx` |
 | 错题练习（错题池随机 50、答对 −1） | ✅ | `src/views/Quiz.tsx` |
 | 解析器单元测试 | ✅ | `src/lib/parser.test.ts` |
+| 练习历史（列表 / 统计 / 回顾回放） | ✅ | `src/views/History.tsx` |
+| 严格模式（歧义即报错、不猜） | ✅ | `src/lib/parser.ts` |
+| 导入页「写法小抄」 | ✅ | `src/views/ImportView.tsx` |
 | 端到端自动化检查（Puppeteer + Edge） | ✅ | `scripts/e2e.mjs` |
 
 P1 已完成：**错题本独立页**（跨库汇总、排序/筛选/搜索、标为已掌握、错题练习）+ **宽容解析**（15 个 vitest 用例覆盖）。
 
-尚未做：练习历史列表、JSON 备份导出、公式渲染。
+尚未做：JSON 备份导出、公式渲染。

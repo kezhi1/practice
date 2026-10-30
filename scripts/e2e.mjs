@@ -139,6 +139,19 @@ try {
     await shot(page, '10-wrong-book-after')
   }
 
+  // 9. 练习历史
+  await clickText(page, '练习历史')
+  await page.waitForSelector('.history-row, .empty-state', { timeout: 8000 })
+  const historyRows = await page.$$eval('.history-row', (els) => els.length)
+  await shot(page, '11-history')
+  if (historyRows > 0) {
+    await clickText(page, '看回顾')
+    await page.waitForFunction(() => document.body.innerText.includes('练习结果'), { timeout: 8000 })
+    await shot(page, '12-history-replay')
+    await clickText(page, '返回练习历史')
+    await page.waitForSelector('.history-row', { timeout: 5000 })
+  }
+
   const stats = await page.evaluate(() => ({
     banks: document.querySelectorAll('.bank-card').length,
     text: document.body.innerText.slice(0, 200),

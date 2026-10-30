@@ -34,6 +34,8 @@ interface Draft {
   difficulty?: number
   tags: string[]
   typeHint?: QType
+  /** 用户显式写了不认识的题型，按“有疑问就拒收”处理 */
+  badType?: string
 }
 
 function stripInlineFormatting(line: string): string {
@@ -259,7 +261,7 @@ export function parseMarkdown(content: string, fallbackTitle = '未命名知识�
         else if (meta.key === 'type') {
           const t = normalizeType(meta.value)
           if (t) draft.typeHint = t
-          else issues.push({ line: lineNo, message: `未知题型「${meta.value}」，按答案自动判断`, level: 'warn' })
+          else draft.badType = meta.value
         }
         continue
       }
@@ -361,19 +363,37 @@ function finalizeDraft(draft: Draft, issues: ParseIssue[]): ParsedQuestion[] {
     issues.push({ line, message: `「${short}…」答案有重复项，已去重`, level: 'warn' })
   }
 
-  let type: QType =
-    draft.typeHint ?? (judge ? 'judge' : unique.length > 1 ? 'multiple' : 'single')
+  if (draft.badType) {
+    issues.push({
+      line,
+      message: `「${short}…」不认识的题型「${draft.badType}」（只支持 单选 / 多选 / 判断），这一题已跳过`,
+      level: 'error',
+    })
+    return []
+  }
 
+  const type: QType = draft.typeHint ?? (judge ? 'judge' : unique.length > 1 ? 'multiple' : 'single')
+
+  // 宽容但不在“意思”上猜：题型和答案个数打架时，宁可拒收也不擅自改判
   if (type === 'judge' && unique.length > 1) {
     issues.push({ line, message: `「${short}…」判断题只能有一个答案`, level: 'error' })
     return []
   }
   if (type === 'single' && unique.length > 1) {
-    issues.push({ line, message: `「${short}…」单选题出现多个答案，已按多选处理`, level: 'warn' })
-    type = 'multiple'
+    issues.push({
+      line,
+      message: `「${short}…」标成单选却给了 ${unique.length} 个答案（${unique.join('')}），是单选还是多选？确认后补一行「> 类型：多选」再导入`,
+      level: 'error',
+    })
+    return []
   }
   if (type === 'multiple' && unique.length < 2) {
-    issues.push({ line, message: `「${short}…」标记为多选但只有一个答案`, level: 'warn' })
+    issues.push({
+      line,
+      message: `「${short}…」标成多选却只有一个答案，是在刷单选吗？确认后改类型再导入`,
+      level: 'error',
+    })
+    return []
   }
 
   return [
