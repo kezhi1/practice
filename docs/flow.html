@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>刷题网页 · 流程图</title>
+<style>
+  :root{
+    --bg:#0a1120; --fg:#e8effa; --muted:#93a4bd; --card:#121e33; --line:#2c3e5c;
+    --blue:#4c8dff; --green:#2ecc71; --amber:#f0a733; --purple:#b06bff; --red:#ff6b6b;
+  }
+  :root[data-theme="dark"]{
+    --bg:#0a1120; --fg:#e8effa; --muted:#93a4bd; --card:#121e33; --line:#2c3e5c;
+    --blue:#4c8dff; --green:#2ecc71; --amber:#f0a733; --purple:#b06bff; --red:#ff6b6b;
+  }
+  :root[data-theme="light"]{
+    --bg:#f6f8fc; --fg:#0f1b2d; --muted:#5a6c85; --card:#ffffff; --line:#cbd6e4;
+    --blue:#2563eb; --green:#12884a; --amber:#b8730a; --purple:#7c3aed; --red:#d92d2d;
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --bg:#f6f8fc; --fg:#0f1b2d; --muted:#5a6c85; --card:#ffffff; --line:#cbd6e4;
+      --blue:#2563eb; --green:#12884a; --amber:#b8730a; --purple:#7c3aed; --red:#d92d2d;
+    }
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; padding:28px 20px 40px; background:var(--bg); color:var(--fg);
+    font-family:"Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  header{max-width:1180px;margin:0 auto 10px;display:flex;gap:16px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+  h1{font-size:19px;margin:0 0 6px;letter-spacing:.2px}
+  .sub{margin:0;color:var(--muted);font-size:13px;line-height:1.7}
+  button{
+    background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:9px;
+    padding:7px 13px;font-size:12.5px;cursor:pointer;transition:.18s;
+  }
+  button:hover{border-color:var(--blue);color:var(--blue)}
+  figure{margin:6px auto 0;max-width:1180px}
+  svg{width:100%;height:auto;display:block}
+  .node rect.body{fill:var(--card);stroke:var(--line);stroke-width:1.4}
+  .node .t{font-size:15px;font-weight:650;fill:var(--fg)}
+  .node .s{font-size:12px;fill:var(--muted)}
+  .diamond polygon{fill:var(--card);stroke:var(--line);stroke-width:1.4}
+  .diamond .t{font-size:14px;font-weight:650;fill:var(--fg)}
+  .diamond .s{font-size:12px;fill:var(--muted)}
+  .link{fill:none;stroke:var(--line);stroke-width:1.6;stroke-dasharray:7 9;
+        animation:flow 1.1s linear infinite;marker-end:url(#arrow)}
+  .label{font-size:11.5px;fill:var(--muted)}
+  .band{fill:none;stroke:var(--amber);stroke-width:1.3;stroke-dasharray:5 6;opacity:.75}
+  .bandTitle{font-size:13.5px;font-weight:650;fill:var(--amber)}
+  .note{font-size:11.5px;fill:var(--muted)}
+  @keyframes flow{to{stroke-dashoffset:-32}}
+  .node rect.body,.diamond polygon{transition:filter .2s, stroke-width .2s}
+  .node:hover rect.body,.diamond:hover polygon{filter:brightness(1.08);stroke-width:2}
+  .legend{font-size:12px;fill:var(--muted)}
+  @media (prefers-reduced-motion: reduce){.link,.node,.diamond{animation:none}}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>刷题网页 · 从 Markdown 到 50 题练习</h1>
+    <p class="sub">主链路：导入 → 解析 → 校验 → 入库 → 抽 50 题 → 作答 → 判分 → 回顾；右侧是贯穿全流程的本地存储与知识库管理。</p>
+  </div>
+  <button id="theme">切换深浅色</button>
+</header>
+
+<figure>
+<svg viewBox="0 0 1320 1058" role="img" aria-label="刷题网页流程图">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--line)"></path>
+    </marker>
+  </defs>
+
+  <!-- 主链路连线 -->
+  <path class="link" d="M475,104 V136"></path>
+  <path class="link" d="M475,204 V236"></path>
+  <path class="link" d="M475,340 V376"></path>
+  <path class="link" d="M475,444 V476"></path>
+  <path class="link" d="M475,580 V616"></path>
+  <path class="link" d="M475,684 V716"></path>
+  <path class="link" d="M475,784 V816"></path>
+  <path class="link" d="M475,884 V916"></path>
+
+  <text class="label" x="487" y="362">通过</text>
+  <text class="label" x="487" y="602">通过</text>
+
+  <!-- 分支连线：校验失败 -->
+  <path class="link" d="M365,290 H305"></path>
+  <text class="label" x="335" y="278" text-anchor="middle">不通过</text>
+  <path class="link" d="M165,254 V72 H304"></path>
+  <text class="label" x="175" y="150">修正后重新导入</text>
+
+  <!-- 分支连线：题量不足 -->
+  <path class="link" d="M365,530 H305"></path>
+  <text class="label" x="335" y="518" text-anchor="middle">不足 50</text>
+  <path class="link" d="M165,562 V652 H304"></path>
+  <text class="label" x="175" y="612">仍可开始</text>
+
+  <!-- 存储与管理连线 -->
+  <path class="link" d="M1110,104 V146"></path>
+  <path class="link" d="M930,412 H646"></path>
+  <text class="label" x="800" y="402" text-anchor="middle">写入</text>
+  <path class="link" d="M1110,534 V652 H650"></path>
+  <text class="label" x="880" y="642" text-anchor="middle">检索并抽题</text>
+
+  <!-- 导入：节点 -->
+  <g class="node" style="animation-delay:.05s">
+    <rect class="body" x="310" y="40" width="330" height="64" rx="12"></rect>
+    <rect x="310" y="40" width="6" height="64" rx="3" fill="var(--blue)"></rect>
+    <text class="t" x="332" y="68">① 导入 Markdown 文件</text>
+    <text class="s" x="332" y="88">.md 拖拽 / 选择 · front matter 带元信息</text>
+  </g>
+  <g class="node" style="animation-delay:.12s">
+    <rect class="body" x="310" y="140" width="330" height="64" rx="12"></rect>
+    <rect x="310" y="140" width="6" height="64" rx="3" fill="var(--blue)"></rect>
+    <text class="t" x="332" y="168">② 解析成结构化题目</text>
+    <text class="s" x="332" y="188">标题→题干 · 列表→选项 · 引用→答案/解析</text>
+  </g>
+
+  <!-- 判断：校验 -->
+  <g class="diamond" style="animation-delay:.19s">
+    <polygon points="475,240 585,290 475,340 365,290"></polygon>
+    <text class="t" x="475" y="286" text-anchor="middle">字段校验</text>
+    <text class="s" x="475" y="306" text-anchor="middle">通过？</text>
+  </g>
+
+  <!-- 错误分支 -->
+  <g class="node" style="animation-delay:.26s">
+    <rect class="body" x="30" y="258" width="270" height="64" rx="12"></rect>
+    <rect x="30" y="258" width="6" height="64" rx="3" fill="var(--red)"></rect>
+    <text class="t" x="52" y="286">错误清单（带行号）</text>
+    <text class="s" x="52" y="306">缺答案 / 无选项 / 题号断档</text>
+  </g>
+
+  <!-- 入库 -->
+  <g class="node" style="animation-delay:.33s">
+    <rect class="body" x="310" y="380" width="330" height="64" rx="12"></rect>
+    <rect x="310" y="380" width="6" height="64" rx="3" fill="var(--amber)"></rect>
+    <text class="t" x="332" y="408">③ 入库：知识库 + 题目</text>
+    <text class="s" x="332" y="428">同名合并 · 题干去重 · 可回滚</text>
+  </g>
+
+  <!-- 判断：题量 -->
+  <g class="diamond" style="animation-delay:.40s">
+    <polygon points="475,480 585,530 475,580 365,530"></polygon>
+    <text class="t" x="475" y="526" text-anchor="middle">可用题目</text>
+    <text class="s" x="475" y="546" text-anchor="middle">≥ 50 ？</text>
+  </g>
+
+  <!-- 不足分支 -->
+  <g class="node" style="animation-delay:.47s">
+    <rect class="body" x="30" y="498" width="270" height="64" rx="12"></rect>
+    <rect x="30" y="498" width="6" height="64" rx="3" fill="var(--amber)"></rect>
+    <text class="t" x="52" y="526">全量出题 / 跨库补齐</text>
+    <text class="s" x="52" y="546">或先补题，再由你决定</text>
+  </g>
+
+  <!-- 抽题 -->
+  <g class="node" style="animation-delay:.54s">
+    <rect class="body" x="310" y="620" width="330" height="64" rx="12"></rect>
+    <rect x="310" y="620" width="6" height="64" rx="3" fill="var(--green)"></rect>
+    <text class="t" x="332" y="648">④ 随机抽取 50 题</text>
+    <text class="s" x="332" y="668">Fisher–Yates 洗牌 · 同一份卷内去重</text>
+  </g>
+  <g class="node" style="animation-delay:.61s">
+    <rect class="body" x="310" y="720" width="330" height="64" rx="12"></rect>
+    <rect x="310" y="720" width="6" height="64" rx="3" fill="var(--green)"></rect>
+    <text class="t" x="332" y="748">⑤ 逐题作答</text>
+    <text class="s" x="332" y="768">进度 3/50 · 计时 · 标记 · 跳过</text>
+  </g>
+  <g class="node" style="animation-delay:.68s">
+    <rect class="body" x="310" y="820" width="330" height="64" rx="12"></rect>
+    <rect x="310" y="820" width="6" height="64" rx="3" fill="var(--green)"></rect>
+    <text class="t" x="332" y="848">⑥ 交卷判分</text>
+    <text class="s" x="332" y="868">单选 / 多选 / 判断 · 多选是否全对才算对</text>
+  </g>
+  <g class="node" style="animation-delay:.75s">
+    <rect class="body" x="310" y="920" width="330" height="64" rx="12"></rect>
+    <rect x="310" y="920" width="6" height="64" rx="3" fill="var(--green)"></rect>
+    <text class="t" x="332" y="948">⑦ 结果页 + 错题回顾</text>
+    <text class="s" x="332" y="968">正确率 · 知识点分布 · 错题入本</text>
+  </g>
+
+  <!-- 知识库管理 -->
+  <g class="node" style="animation-delay:.26s">
+    <rect class="body" x="960" y="40" width="300" height="64" rx="12"></rect>
+    <rect x="960" y="40" width="6" height="64" rx="3" fill="var(--purple)"></rect>
+    <text class="t" x="982" y="68">知识库管理</text>
+    <text class="s" x="982" y="88">增 / 删 / 改 / 查 · 单题编辑</text>
+  </g>
+
+  <!-- 存储带 -->
+  <rect class="band" x="930" y="150" width="340" height="380" rx="14"></rect>
+  <text class="bandTitle" x="950" y="182">本地存储 · IndexedDB (Dexie)</text>
+
+  <g class="node" style="animation-delay:.33s">
+    <rect class="body" x="950" y="196" width="300" height="48" rx="10"></rect>
+    <text class="s" x="968" y="225" style="font-size:12.5px;fill:var(--fg)">banks · 知识库（标题 / 标签）</text>
+  </g>
+  <g class="node" style="animation-delay:.40s">
+    <rect class="body" x="950" y="262" width="300" height="48" rx="10"></rect>
+    <text class="s" x="968" y="291" style="font-size:12.5px;fill:var(--fg)">questions · 题目（题干 / 选项 / 答案）</text>
+  </g>
+  <g class="node" style="animation-delay:.47s">
+    <rect class="body" x="950" y="328" width="300" height="48" rx="10"></rect>
+    <text class="s" x="968" y="357" style="font-size:12.5px;fill:var(--fg)">sessions · 练习记录（作答快照）</text>
+  </g>
+  <g class="node" style="animation-delay:.54s">
+    <rect class="body" x="950" y="394" width="300" height="48" rx="10"></rect>
+    <text class="s" x="968" y="423" style="font-size:12.5px;fill:var(--fg)">wrongBook · 错题本（错误次数）</text>
+  </g>
+  <text class="note" x="950" y="480">离线可用 · 一键导出 / 导入 JSON 备份</text>
+  <text class="note" x="950" y="502">换后端时只替换 repository 层</text>
+
+  <!-- 图例 -->
+  <g class="legend">
+    <circle cx="215" cy="1032" r="5" fill="var(--blue)"></circle><text x="228" y="1036">导入解析</text>
+    <circle cx="330" cy="1032" r="5" fill="var(--amber)"></circle><text x="343" y="1036">入库 / 存储</text>
+    <circle cx="465" cy="1032" r="5" fill="var(--green)"></circle><text x="478" y="1036">抽题与作答</text>
+    <circle cx="600" cy="1032" r="5" fill="var(--purple)"></circle><text x="613" y="1036">知识库管理</text>
+    <circle cx="735" cy="1032" r="5" fill="var(--red)"></circle><text x="748" y="1036">异常分支</text>
+  </g>
+</svg>
+</figure>
+
+<script>
+  var btn = document.getElementById('theme');
+  btn.addEventListener('click', function () {
+    var cur = document.documentElement.getAttribute('data-theme');
+    if (!cur) {
+      var light = window.matchMedia('(prefers-color-scheme: light)').matches;
+      cur = light ? 'light' : 'dark';
+    }
+    document.documentElement.setAttribute('data-theme', cur === 'dark' ? 'light' : 'dark');
+  });
+</script>
+</body>
+</html>
