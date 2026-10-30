@@ -93,6 +93,17 @@ try {
   await clickText(page, '开始刷题')
   await page.waitForSelector('.option', { timeout: 8000 })
   const firstStem = await page.$eval('.stem', (el) => el.textContent)
+
+  // 键盘：数字键选选项、方向键切题
+  await page.keyboard.press('2')
+  const kbdSelected = await page.$$eval('.option.selected', (els) => els.length)
+  await page.keyboard.press('ArrowRight')
+  await new Promise((r) => setTimeout(r, 80))
+  const kbAdvance = await page.$$eval('.dot.current', (els) => els.map((e) => e.textContent))
+  if (kbdSelected !== 1) throw new Error(`键盘选选项失败：selected=${kbdSelected}`)
+  if (kbAdvance[0] !== '2') throw new Error(`键盘切题失败：current=${kbAdvance}`)
+  await page.keyboard.press('ArrowLeft')
+  await new Promise((r) => setTimeout(r, 80))
   // 随机作答 12 题
   for (let i = 0; i < 12; i++) {
     const opts = await page.$$('.option')
@@ -156,7 +167,7 @@ try {
     banks: document.querySelectorAll('.bank-card').length,
     text: document.body.innerText.slice(0, 200),
   }))
-  console.log(JSON.stringify({ ok: true, firstStem, stats, errors }, null, 2))
+  console.log(JSON.stringify({ ok: true, firstStem, kbdSelected, kbAdvance, stats, errors }, null, 2))
 } catch (e) {
   console.error('E2E FAILED:', e.message)
   await shot(page, '99-failure')

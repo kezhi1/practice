@@ -1008,3 +1008,19 @@ select:focus,
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* ---------- 键盘提示 ---------- */
+.kbd-hint {
+  margin-left: 10px;
+  opacity: 0.8;
+}
+kbd {
+  font-family: inherit;
+  font-size: 11px;
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  padding: 0 4px;
+  margin: 0 1px;
+  background: var(--panel);
+}

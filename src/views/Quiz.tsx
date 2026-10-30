@@ -64,6 +64,46 @@ export default function Quiz({ source, onFinish, onExit }: Props) {
     if (cur) box.scrollLeft = cur.offsetLeft - box.clientWidth / 2 + cur.clientWidth / 2
   }, [idx])
 
+  // 键盘：1-9 / A-D 选选项，← → 切题，Enter 下一题，F 标记
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const el = e.target as HTMLElement | null
+      if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      const cur = questions[idx]
+      if (!cur) return
+
+      const digit = Number.parseInt(e.key, 10)
+      if (digit >= 1 && digit <= cur.options.length) {
+        e.preventDefault()
+        choose(cur, cur.options[digit - 1].key)
+        return
+      }
+      const letter = e.key.toUpperCase()
+      if (/^[A-Z]$/.test(letter) && cur.options.some((o) => o.key === letter)) {
+        e.preventDefault()
+        choose(cur, letter)
+        return
+      }
+      if (e.key === 'ArrowRight' || e.key === 'Enter') {
+        e.preventDefault()
+        if (idx < questions.length - 1) setIdx(idx + 1)
+        return
+      }
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault()
+        if (idx > 0) setIdx(idx - 1)
+        return
+      }
+      if (letter === 'F') {
+        e.preventDefault()
+        toggleFlag(cur.id)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  })
+
   function choose(q: Question, key: string) {
     setAnswers((prev) => {
       const cur = prev[q.id] ?? []
@@ -197,7 +237,13 @@ export default function Quiz({ source, onFinish, onExit }: Props) {
           })}
         </div>
 
-        {q.type === 'multiple' && <p className="muted tiny">多选题：选全才得分，可多选。</p>}
+        <p className="muted tiny">
+          {q.type === 'multiple' ? '多选题：选全才得分，可多选。' : ''}
+          <span className="kbd-hint">
+            键盘：<kbd>1</kbd>-<kbd>4</kbd> 或 <kbd>A</kbd>-<kbd>D</kbd> 选，<kbd>←</kbd>
+            <kbd>→</kbd> 切题，<kbd>F</kbd> 标记
+          </span>
+        </p>
 
         <div className="dots-wrap">
           <div className="dots" ref={dotsRef}>
