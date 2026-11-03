@@ -32,6 +32,20 @@ node scripts/e2e.mjs
 
 单元测试会顺带校验这份示例能无错误解析，改坏了跑 `npm test` 就会红。
 
+## 在线版（GitHub Pages）
+
+仓库自带 `.github/workflows/deploy.yml`：push 到 `main` 就自动构建并发布，不需要手动打包。
+
+第一次启用要去仓库 **Settings → Pages → Source** 选 **GitHub Actions**（不选就一直部署失败）。之后每次 push，Actions 会自动跑 `npm ci && npm run build`，把 `dist/` 作为静态站点发布，地址形如：
+
+```
+https://kezhi1.github.io/practice/
+```
+
+因为 `base: './'`、manifest 的 `start_url/scope`、Service Worker 的注册路径全用相对路径，部署到 `/practice/` 这种子路径下能直接工作（已用本地子路径模拟验证：SW 作用域 `/practice/`、缓存键 `/practice/...`、断网可用）。
+
+手机上用这个 https 地址打开就能「添加到主屏幕」，变成独立 App。
+
 ## 数据存在哪儿
 
 题库、错题、练习记录都存在**浏览器的 IndexedDB** 里，跟着「打开地址」走：
@@ -178,6 +192,7 @@ examples/
 scripts/e2e.mjs        Puppeteer 端到端检查
 scripts/features-check.mjs  练习模式 / 断点续答 / 收藏 / 复习自检
 scripts/pwa-check.mjs       manifest / Service Worker / 离线自检
+scripts/subpath-check.mjs   子路径部署（GitHub Pages）自检
 public/                manifest、sw.js、图标
 docs/outline.md        产品大纲
 docs/flow.html         流程图（可交互，深浅色切换）
