@@ -40,6 +40,12 @@ export default function BankDetail({ bankId, onBack, onQuiz }: Props) {
     })
   }, [questions, keyword, type])
 
+  async function toggleFav(q: Question) {
+    const fav = !q.fav
+    setQuestions((prev) => prev.map((x) => (x.id === q.id ? { ...x, fav } : x)))
+    await db.questions.update(q.id, { fav, updatedAt: Date.now() })
+  }
+
   async function saveQuestion(id: string | null, data: {
     stem: string
     type: QType
@@ -156,6 +162,13 @@ export default function BankDetail({ bankId, onBack, onQuiz }: Props) {
             <div className="row between">
               <span className="muted small">答案 {q.answer.join('')}</span>
               <div className="row gap">
+                <button
+                  className={`btn ghost sm ${q.fav ? 'fav-on' : ''}`}
+                  onClick={() => void toggleFav(q)}
+                  title="收藏"
+                >
+                  {q.fav ? '★ 已收藏' : '☆ 收藏'}
+                </button>
                 <button className="btn ghost sm" onClick={() => setEditing(q)}>
                   编辑
                 </button>

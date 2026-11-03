@@ -33,11 +33,36 @@ export interface Question {
   wrongCount: number
   /** 最近一次答错的时间，用于错题本排序 */
   lastWrongAt?: number
+  /** 一共在练习里作答过几次，用于「优先没做过」的抽题策略 */
+  seenCount?: number
+  /** 收藏夹 */
+  fav?: boolean
+  /** 间隔重复：连续答对的次数，0 表示刚答错、重新开始 */
+  stage?: number
+  /** 间隔重复：下次该复习的时间戳，到点后进入「今日待复习」 */
+  dueAt?: number
+  /** 间隔重复：最近一次复习时间 */
+  lastReviewAt?: number
   createdAt: number
   updatedAt: number
 }
 
 export type AnswerMap = Record<string, string[]>
+
+/** 答题模式：考试（交卷后统一看结果） / 练习（答完立刻看对错） */
+export type QuizMode = 'exam' | 'practice'
+
+/** 未交卷的作答草稿，用于刷新后恢复进度 */
+export interface Draft {
+  sourceKey: string
+  bankTitle: string
+  questionIds: string[]
+  answers: AnswerMap
+  flags: string[]
+  idx: number
+  startedAt: number
+  mode: QuizMode
+}
 
 export interface Session {
   id: string

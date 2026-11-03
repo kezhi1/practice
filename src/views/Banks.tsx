@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { db, deleteBank, listBanks } from '../db'
+import { DRAW_MODE_LABEL, db, deleteBank, listBanks, loadDrawMode, saveDrawMode, type DrawMode } from '../db'
 import type { Bank } from '../types'
 
 interface Props {
@@ -19,6 +19,12 @@ interface Row {
 export default function Banks({ onOpen, onQuiz, onImport }: Props) {
   const [rows, setRows] = useState<Row[]>([])
   const [loading, setLoading] = useState(true)
+  const [drawMode, setDrawMode] = useState<DrawMode>(loadDrawMode)
+
+  function changeDrawMode(mode: DrawMode) {
+    setDrawMode(mode)
+    saveDrawMode(mode)
+  }
 
   async function load() {
     const [banks, questions, sessions] = await Promise.all([
@@ -60,8 +66,24 @@ export default function Banks({ onOpen, onQuiz, onImport }: Props) {
       <div className="page-head">
         <div>
           <h1>知识库</h1>
-          <p className="muted">导入 Markdown 建立题库，每次练习随机抽 50 题。</p>
+          <p className="muted">导入 Markdown 建立题库，每次练习抽 50 题。</p>
         </div>
+        {rows.length > 0 && (
+          <div className="row gap">
+            <span className="muted small">抽题</span>
+            <div className="segmented small" role="group" aria-label="抽题策略">
+              {(['random', 'unseen', 'weak'] as DrawMode[]).map((m) => (
+                <button
+                  key={m}
+                  className={drawMode === m ? 'active' : ''}
+                  onClick={() => changeDrawMode(m)}
+                >
+                  {DRAW_MODE_LABEL[m]}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {rows.length === 0 ? (

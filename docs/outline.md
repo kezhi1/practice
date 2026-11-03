@@ -142,9 +142,18 @@ P0 已完成并跑通（`E:\practice`）：导入 → 解析校验 → 入库 �
 | 严格模式（歧义即报错、不猜） | ✅ | `src/lib/parser.ts` |
 | 导入页「写法小抄」 | ✅ | `src/views/ImportView.tsx` |
 | 端到端自动化检查（Puppeteer + Edge） | ✅ | `scripts/e2e.mjs` |
+| 答题模式（考试 / 练习即时反馈） | ✅ | `src/views/Quiz.tsx` |
+| 抽题策略（随机 / 优先没做过 / 优先错题） | ✅ | `src/db.ts`、`src/views/Banks.tsx` |
+| 断点续答（草稿表 + 恢复提示） | ✅ | `src/db.ts`、`src/views/Quiz.tsx` |
+| 收藏夹 + 收藏练习 | ✅ | `src/views/Review.tsx` |
+| 间隔复习（10 分钟 → 30 天阶梯） | ✅ | `src/lib/srs.ts`、`src/views/Review.tsx` |
+| PWA（manifest + Service Worker 离线） | ✅ | `public/manifest.webmanifest`、`public/sw.js` |
+| 功能自检 / 离线自检脚本 | ✅ | `scripts/features-check.mjs`、`scripts/pwa-check.mjs` |
 
 P1 已完成：**错题本独立页**（跨库汇总、排序/筛选/搜索、标为已掌握、错题练习）+ **宽容解析**（15 个 vitest 用例覆盖）。
 
 **明确的边界（2026-10-30 确认）**：只在单台设备使用，不做 JSON 备份/迁移；题目不含数学公式，不做 KaTeX；判断题「只写答案对/错」时仍自动补选项（唯一保留的自动补全）。
 
-尚未做：弱项统计、题库批量操作。
+P2 已完成（2026-11-03）：**即时反馈（练习模式）**、**间隔重复复习**、**收藏夹**、**抽题策略**、**断点续答**、**PWA 离线安装**。
+
+尚未做：弱项统计、题库批量操作、跨库重复题检测、移动端专门布局。
