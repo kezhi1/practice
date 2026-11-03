@@ -19,7 +19,7 @@ npm test         # 单元测试（vitest：解析器 19 个用例 + 示例题库
 node scripts/e2e.mjs
 ```
 
-它会走完「导入 → 题库 → 抽 50 题 → 作答 → 交卷 → 结果 → 错题本 → 练习历史」全流程，把截图写进 `docs/shots/`，并收集控制台错误。
+它会走完「导入 → 题库 → 抽 50 题 → 作答 → 交卷 → 结果 → 错题本 → 练习历史」全流程，把截图写进本地的 `docs/shots/`（已在 `.gitignore` 里，不入库），并收集控制台错误。
 
 ## 示例题库
 
@@ -180,8 +180,8 @@ scripts/features-check.mjs  练习模式 / 断点续答 / 收藏 / 复习自检
 scripts/pwa-check.mjs       manifest / Service Worker / 离线自检
 public/                manifest、sw.js、图标
 docs/outline.md        产品大纲
-docs/git-guide.md      推到 GitHub 的完整流程
 docs/flow.html         流程图（可交互，深浅色切换）
+docs/shots/            自检截图（本地生成，不入库）
 ```
 
 ## 许可证

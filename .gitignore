@@ -5,3 +5,6 @@ preview.log
 *.log
 *.local
 docs/shots/99-failure.png
+
+# 自检脚本产出的截图，不入库（要看去本地 docs/shots/）
+docs/shots/
