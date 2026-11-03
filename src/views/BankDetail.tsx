@@ -16,6 +16,8 @@ export default function BankDetail({ bankId, onBack, onQuiz }: Props) {
   const [type, setType] = useState<'all' | QType>('all')
   const [editing, setEditing] = useState<Question | 'new' | null>(null)
   const [loading, setLoading] = useState(true)
+  const [renaming, setRenaming] = useState(false)
+  const [nameDraft, setNameDraft] = useState('')
 
   async function load() {
     const [b, list] = await Promise.all([
@@ -85,6 +87,27 @@ export default function BankDetail({ bankId, onBack, onQuiz }: Props) {
     await load()
   }
 
+  function startRename() {
+    setNameDraft(bank?.title ?? '')
+    setRenaming(true)
+  }
+
+  async function saveName() {
+    if (!bank) return
+    const title = nameDraft.trim()
+    if (!title) {
+      window.alert('知识库名字不能为空。')
+      return
+    }
+    if (title !== bank.title) {
+      await db.banks.update(bank.id, { title, updatedAt: Date.now() })
+      // 练习记录里存的是当时的知识库名字，一并改掉，历史列表才不会显示旧名
+      await db.sessions.where('bankId').equals(bank.id).modify({ bankTitle: title })
+      setBank({ ...bank, title })
+    }
+    setRenaming(false)
+  }
+
   async function removeBank() {
     if (!bank) return
     if (!window.confirm(`删除知识库「${bank.title}」及全部 ${questions.length} 道题？`)) return
@@ -102,7 +125,33 @@ export default function BankDetail({ bankId, onBack, onQuiz }: Props) {
           <button className="link-back" onClick={onBack}>
             ← 全部知识库
           </button>
-          <h1>{bank.title}</h1>
+          {renaming ? (
+            <div className="rename-row">
+              <input
+                className="input rename-input"
+                autoFocus
+                value={nameDraft}
+                onChange={(e) => setNameDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') void saveName()
+                  if (e.key === 'Escape') setRenaming(false)
+                }}
+              />
+              <button className="btn primary sm" onClick={() => void saveName()}>
+                保存
+              </button>
+              <button className="btn ghost sm" onClick={() => setRenaming(false)}>
+                取消
+              </button>
+            </div>
+          ) : (
+            <h1 className="bank-title">
+              {bank.title}
+              <button className="btn ghost sm rename-btn" onClick={startRename}>
+                重命名
+              </button>
+            </h1>
+          )}
           <p className="muted">
             {questions.length} 题 · 每次练习随机抽 {Math.min(50, questions.length)} 题
             {questions.length < 50 && questions.length > 0 ? '（不足 50，全部出题）' : ''}

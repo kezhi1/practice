@@ -75,6 +75,24 @@ try {
   })
   await sleep(300)
 
+  // 重命名知识库
+  console.log('step: rename bank')
+  await page.evaluate(() => {
+    ;[...document.querySelectorAll('button')].find((b) => b.textContent.trim() === '重命名')?.click()
+  })
+  await page.waitForSelector('.rename-input', { timeout: 5000 })
+  await page.evaluate(() => {
+    const el = document.querySelector('.rename-input')
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set
+    setter.call(el, '功能自检（改名）')
+    el.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+  await page.keyboard.press('Enter')
+  await sleep(500)
+  const renamed = await page.$eval('.bank-title', (el) => el.textContent)
+  if (!renamed.includes('功能自检（改名）')) throw new Error(`重命名没生效：${renamed}`)
+  await page.screenshot({ path: 'docs/shots/20-rename.png' })
+
   // 回到知识库列表，检查抽题策略选择器
   console.log('step: banks page draw mode')
   await page.evaluate(() => {
@@ -86,6 +104,23 @@ try {
   const modes = await page.$$eval('.segmented.small button', (els) => els.map((e) => e.textContent))
   if (modes.length !== 3) throw new Error(`抽题策略按钮数不对：${modes}`)
   await page.screenshot({ path: 'docs/shots/13-draw-mode.png' })
+
+  // 卡片上也能重命名（这里按 Esc 取消，只验入口）
+  console.log('step: rename on card')
+  await page.evaluate(() => {
+    ;[...document.querySelectorAll('.bank-card button')]
+      .find((b) => b.textContent.trim() === '重命名')
+      ?.click()
+  })
+  await page.waitForSelector('.rename-input-sm', { timeout: 5000 })
+  await page.screenshot({ path: 'docs/shots/21-rename-card.png' })
+  await page.keyboard.press('Escape')
+  await sleep(200)
+  const stillRenamed = await page.evaluate(() => {
+    const el = document.querySelector('.bank-card h3')
+    return document.querySelector('.rename-input-sm') === null && el?.textContent === '功能自检（改名）'
+  })
+  if (!stillRenamed) throw new Error('卡片重命名取消后状态不对')
 
   console.log('step: start quiz')
   await page.evaluate(() => {
@@ -158,6 +193,34 @@ try {
         req.onerror = () => res('open-error')
       }),
   )
+
+  console.log('step: rename after submit updates history')
+  await page.evaluate(() => {
+    ;[...document.querySelectorAll('.topbar button')].find((b) => b.textContent.trim() === '知识库')?.click()
+  })
+  await page.waitForSelector('.bank-card', { timeout: 8000 })
+  await page.evaluate(() => {
+    ;[...document.querySelectorAll('button')].find((b) => b.textContent.trim() === '管理')?.click()
+  })
+  await page.waitForSelector('.rename-btn', { timeout: 8000 })
+  await page.evaluate(() => {
+    ;[...document.querySelectorAll('button')].find((b) => b.textContent.trim() === '重命名')?.click()
+  })
+  await page.waitForSelector('.rename-input', { timeout: 5000 })
+  await page.evaluate(() => {
+    const el = document.querySelector('.rename-input')
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set
+    setter.call(el, '功能自检（再改）')
+    el.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+  await page.keyboard.press('Enter')
+  await sleep(500)
+  await page.evaluate(() => {
+    ;[...document.querySelectorAll('.topbar button')].find((b) => b.textContent.trim() === '练习历史')?.click()
+  })
+  await page.waitForSelector('.history-list', { timeout: 8000 })
+  const historyText = await page.evaluate(() => document.body.innerText)
+  if (!historyText.includes('功能自检（再改）')) throw new Error('重命名后练习历史仍显示旧名字')
 
   console.log('step: review page')
   await page.evaluate(() => {

@@ -20,6 +20,8 @@ export default function Banks({ onOpen, onQuiz, onImport }: Props) {
   const [rows, setRows] = useState<Row[]>([])
   const [loading, setLoading] = useState(true)
   const [drawMode, setDrawMode] = useState<DrawMode>(loadDrawMode)
+  const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [nameDraft, setNameDraft] = useState('')
 
   function changeDrawMode(mode: DrawMode) {
     setDrawMode(mode)
@@ -52,6 +54,24 @@ export default function Banks({ onOpen, onQuiz, onImport }: Props) {
   useEffect(() => {
     void load()
   }, [])
+
+  function startRename(row: Row) {
+    setNameDraft(row.bank.title)
+    setRenamingId(row.bank.id)
+  }
+
+  async function saveName(id: string) {
+    const title = nameDraft.trim()
+    if (!title) {
+      window.alert('知识库名字不能为空。')
+      return
+    }
+    await db.banks.update(id, { title, updatedAt: Date.now() })
+    // 练习记录里存的是当时的名字，一并改掉
+    await db.sessions.where('bankId').equals(id).modify({ bankTitle: title })
+    setRenamingId(null)
+    await load()
+  }
 
   async function remove(row: Row) {
     if (!window.confirm(`删除「${row.bank.title}」及其 ${row.total} 道题？此操作不可撤销。`)) return
@@ -99,8 +119,34 @@ export default function Banks({ onOpen, onQuiz, onImport }: Props) {
         <div className="grid">
           {rows.map((row) => (
             <article className="card bank-card" key={row.bank.id}>
-              <header onClick={() => onOpen(row.bank.id)}>
-                <h3>{row.bank.title}</h3>
+              <header
+                onClick={() => {
+                  setRenamingId(null)
+                  onOpen(row.bank.id)
+                }}
+              >
+                {renamingId === row.bank.id ? (
+                  <div className="rename-row" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      className="input rename-input-sm"
+                      autoFocus
+                      value={nameDraft}
+                      onChange={(e) => setNameDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') void saveName(row.bank.id)
+                        if (e.key === 'Escape') setRenamingId(null)
+                      }}
+                    />
+                    <button className="btn primary sm" onClick={() => void saveName(row.bank.id)}>
+                      保存
+                    </button>
+                    <button className="btn ghost sm" onClick={() => setRenamingId(null)}>
+                      取消
+                    </button>
+                  </div>
+                ) : (
+                  <h3>{row.bank.title}</h3>
+                )}
                 <div className="meta">
                   <span>{row.total} 题</span>
                   <span>练过 {row.attempts} 次</span>
@@ -122,10 +168,13 @@ export default function Banks({ onOpen, onQuiz, onImport }: Props) {
                 <button className="btn primary" disabled={row.total === 0} onClick={() => onQuiz(row.bank.id)}>
                   开始刷题
                 </button>
-                <button className="btn ghost" onClick={() => onOpen(row.bank.id)}>
+                <button className="btn ghost sm" onClick={() => onOpen(row.bank.id)}>
                   管理
                 </button>
-                <button className="btn danger-ghost" onClick={() => void remove(row)}>
+                <button className="btn ghost sm" onClick={() => startRename(row)}>
+                  重命名
+                </button>
+                <button className="btn danger-ghost sm" onClick={() => void remove(row)}>
                   删除
                 </button>
               </footer>

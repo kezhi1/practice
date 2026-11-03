@@ -391,9 +391,18 @@ select:focus,
 }
 .bank-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   margin-top: auto;
   padding-top: 14px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.bank-actions .btn {
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+.bank-actions .btn.sm {
+  padding: 5px 8px;
 }
 
 /* ---------- 导入 ---------- */
@@ -1119,4 +1128,38 @@ kbd {
   color: #b98900;
   border-color: color-mix(in srgb, #e0a800 45%, transparent);
   background: color-mix(in srgb, #ffcc00 12%, transparent);
+}
+
+/* 知识库重命名 */
+.bank-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.rename-btn {
+  font-weight: 400;
+  color: var(--muted);
+}
+.rename-btn:hover {
+  color: var(--fg);
+}
+.rename-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 8px;
+  flex-wrap: nowrap;
+}
+.rename-input {
+  width: min(420px, 100%);
+  font-size: 22px;
+  font-weight: 650;
+}
+.rename-input-sm {
+  flex: 1 1 120px;
+  min-width: 90px;
+  font-size: 15px;
+  font-weight: 600;
+  padding: 6px 9px;
 }
