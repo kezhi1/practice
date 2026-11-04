@@ -77,6 +77,10 @@ await page.evaluate(() => {
 await sleep(500)
 const afterMore = await page.evaluate(() => document.querySelectorAll('.question-row').length)
 
+await page.evaluate(() => window.scrollTo(0, 0))
+await sleep(200)
+await page.screenshot({ path: 'docs/shots/perf-bank-list.png' })
+
 // 搜索响应
 const t2 = Date.now()
 const keyword = `第 ${Math.min(7, N)} 题：`
