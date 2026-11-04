@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { db, deleteBank, stemKey, uid } from '../db'
 import { renderInline } from '../lib/markdown'
 import { TYPE_LABEL, type Bank, type QType, type Question } from '../types'
@@ -9,6 +9,8 @@ interface Props {
   onQuiz: () => void
 }
 
+const PAGE_SIZE = 50
+
 export default function BankDetail({ bankId, onBack, onQuiz }: Props) {
   const [bank, setBank] = useState<Bank | null>(null)
   const [questions, setQuestions] = useState<Question[]>([])
@@ -18,6 +20,8 @@ export default function BankDetail({ bankId, onBack, onQuiz }: Props) {
   const [loading, setLoading] = useState(true)
   const [renaming, setRenaming] = useState(false)
   const [nameDraft, setNameDraft] = useState('')
+  const [visible, setVisible] = useState(PAGE_SIZE)
+  const sentinel = useRef<HTMLDivElement | null>(null)
 
   async function load() {
     const [b, list] = await Promise.all([
@@ -33,14 +37,35 @@ export default function BankDetail({ bankId, onBack, onQuiz }: Props) {
     void load()
   }, [bankId])
 
+  // 关键词走延迟值：输入不卡，过滤结果稍后跟上
+  const deferredKeyword = useDeferredValue(keyword)
+
   const filtered = useMemo(() => {
-    const kw = keyword.trim().toLowerCase()
+    const kw = deferredKeyword.trim().toLowerCase()
     return questions.filter((q) => {
       if (type !== 'all' && q.type !== type) return false
       if (!kw) return true
       return q.stem.toLowerCase().includes(kw) || q.options.some((o) => o.text.toLowerCase().includes(kw))
     })
-  }, [questions, keyword, type])
+  }, [questions, deferredKeyword, type])
+
+  // 换题库 / 换关键词 / 换题型时回到第一页
+  useEffect(() => {
+    setVisible(PAGE_SIZE)
+  }, [bankId, deferredKeyword, type])
+
+  // 滚到底自动加载下一批（几千题的库也不至于一次渲染完）
+  useEffect(() => {
+    const node = sentinel.current
+    if (!node) return
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) {
+        setVisible((v) => (v < filtered.length ? v + PAGE_SIZE : v))
+      }
+    }, { rootMargin: '300px' })
+    io.observe(node)
+    return () => io.disconnect()
+  }, [filtered.length, visible])
 
   async function toggleFav(q: Question) {
     const fav = !q.fav
@@ -188,15 +213,18 @@ export default function BankDetail({ bankId, onBack, onQuiz }: Props) {
             </button>
           ))}
         </div>
-        <span className="muted small">{filtered.length} / {questions.length}</span>
+        <span className="muted small">
+          {filtered.length === questions.length
+            ? `${questions.length} 题`
+            : `匹配 ${filtered.length} / 共 ${questions.length}`}
+        </span>
       </div>
 
       <div className="question-list">
-        {filtered.map((q, i) => (
+        {filtered.slice(0, visible).map((q, i) => (
           <article className="card pad question-row" key={q.id}>
             <div className="q-head">
               <span className={`badge type-${q.type}`}>{TYPE_LABEL[q.type]}</span>
-              <span className="muted small">难度 {q.difficulty}</span>
               {q.wrongCount > 0 && <span className="muted small">错 {q.wrongCount} 次</span>}
               <span className="muted small">#{i + 1}</span>
             </div>
@@ -230,6 +258,13 @@ export default function BankDetail({ bankId, onBack, onQuiz }: Props) {
         ))}
         {filtered.length === 0 && (
           <div className="empty">没有匹配的题目。换个关键词，或新增一道。</div>
+        )}
+        {visible < filtered.length && (
+          <div className="load-more" ref={sentinel}>
+            <button className="btn ghost" onClick={() => setVisible((v) => v + PAGE_SIZE)}>
+              加载更多（还有 {filtered.length - visible} 题）
+            </button>
+          </div>
         )}
       </div>
 

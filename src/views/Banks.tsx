@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { DRAW_MODE_LABEL, db, deleteBank, listBanks, loadDrawMode, saveDrawMode, type DrawMode } from '../db'
-import type { Bank } from '../types'
+import type { Bank, Session } from '../types'
 
 interface Props {
   onOpen: (bankId: string) => void
@@ -34,17 +34,27 @@ export default function Banks({ onOpen, onQuiz, onImport }: Props) {
       db.questions.toArray(),
       db.sessions.toArray(),
     ])
+    // 一次遍历汇总，避免每个题库各扫一遍全表（题库多了就是 O(n×m)）
+    const counts = new Map<string, number>()
+    for (const q of questions) counts.set(q.bankId, (counts.get(q.bankId) ?? 0) + 1)
+
+    const attempts = new Map<string, number>()
+    const latest = new Map<string, Session>()
+    for (const s of sessions) {
+      attempts.set(s.bankId, (attempts.get(s.bankId) ?? 0) + 1)
+      const prev = latest.get(s.bankId)
+      if (!prev || s.finishedAt > prev.finishedAt) latest.set(s.bankId, s)
+    }
+
     setRows(
       banks.map((bank) => {
-        const list = sessions
-          .filter((s) => s.bankId === bank.id)
-          .sort((a, b) => b.finishedAt - a.finishedAt)
+        const last = latest.get(bank.id)
         return {
           bank,
-          total: questions.filter((q) => q.bankId === bank.id).length,
-          attempts: list.length,
-          last: list[0]?.score,
-          lastTotal: list[0]?.total,
+          total: counts.get(bank.id) ?? 0,
+          attempts: attempts.get(bank.id) ?? 0,
+          last: last?.score,
+          lastTotal: last?.total,
         }
       }),
     )

@@ -431,7 +431,6 @@ export default function Quiz({ source, onFinish, onExit }: Props) {
           <span className="muted small">
             第 {idx + 1} / {questions.length} 题
           </span>
-          <span className="muted small">难度 {q.difficulty}</span>
           {q.wrongCount > 0 && <span className="badge warn">错过 {q.wrongCount} 次</span>}
           <button
             className={`btn ghost sm push ${q.fav ? 'fav-on' : ''}`}

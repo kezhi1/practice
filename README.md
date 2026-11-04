@@ -201,6 +201,22 @@ tags: [网络, 面试]
 
 自检脚本 `scripts/mobile-shots.mjs` 会在 390 / 360 / 768 三个宽度下逐页截图，并检测每个页面有没有横向溢出（`documentElement.scrollWidth > innerWidth` 或元素越过右边界）。
 
+## 大题库（几百到几千题）
+
+题库管理页按 50 题一批渲染，滚到底（或点「加载更多」）再取下一批，不会一次性把几千张卡片塞进页面。搜索用 `useDeferredValue` 延后过滤，输入过程不卡。
+
+实测（本机 Edge、`node scripts/perf-check.mjs <题数>`）：
+
+| 题数 | 打开管理页 | 首屏卡片 | DOM 节点 | 搜索 |
+| --- | --- | --- | --- | --- |
+| 300 | 81ms | 50 | 852 | 22ms |
+| 3000 | 419ms | 50 | 852 | 28ms |
+| 6000 | 826ms | 50 | 852 | 28ms |
+
+同样 3000 题，改成一次渲染全部的话是：打开 1401ms、48050 个 DOM 节点、搜索 328ms。分页之后节点数不随题库增长，这是关键。
+
+题库首页的统计也改成一次遍历汇总，不再是「每个题库各扫一遍全表」；几十个考试库时差别明显。
+
 ## 刷题时的键盘操作
 
 `1`–`4` 或 `A`–`D` 选选项 · `←` `→` 切题 · `Enter` 下一题 · `F` 标记本题。焦点在输入框或按着 Ctrl/⌘ 时不拦截。
@@ -241,6 +257,7 @@ scripts/sw-update-check.mjs 新版本替换旧缓存、提示条自检
 scripts/ux-check.mjs       未答确认 / 答题卡状态 / 字号 / hash 路由自检
 scripts/subpath-check.mjs   子路径部署（GitHub Pages）自检
 scripts/mobile-shots.mjs    390/360/768 三档宽度截图 + 横向溢出检测
+scripts/perf-check.mjs      大题库性能（分批渲染 / 搜索 / 加载更多）自检
 public/                manifest、sw.js、图标
 docs/outline.md        产品大纲
 docs/flow.html         流程图（可交互，深浅色切换）
