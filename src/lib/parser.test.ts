@@ -174,3 +174,83 @@ describe('解析：有疑问就拒收（严格模式）', () => {
     expect(r.issues.some((i) => i.level === 'error')).toBe(true)
   })
 })
+
+describe('解析：编号式（题库导出最常见的那种）', () => {
+  it('1. 题干 + - A. 选项 + > 答案：A', () => {
+    const md = `1. 下列说法正确的是（）
+- A. 公安网是独立的大型城域网，与其他网络是物理隔离的
+- B. 公安网与党政网是相通的
+- C. 公安网内没有计算机病毒
+- D. 公安网上可以建游戏网站
+
+> 答案：A
+
+2. 以下哪一项用作计算机开机密码相对最安全（）
+- A. 0.123456
+- B. a3zx0.31
+- C. 88888778.0
+- D. mmm12345
+
+> 答案：A`
+
+    const r = ok(md)
+    expect(r.questions).toHaveLength(2)
+    expect(r.questions[0].stem).toBe('下列说法正确的是（）')
+    expect(r.questions[0].options.map((o) => o.key)).toEqual(['A', 'B', 'C', 'D'])
+    expect(r.questions[0].type).toBe('single')
+    expect(r.questions[0].answer).toEqual(['A'])
+    expect(r.questions[1].stem).toContain('开机密码')
+  })
+
+  it('全角句点、句点后没空格、括号编号都算题号', () => {
+    const md = `1．第一题（）
+A．甲
+B．乙
+答案：B
+
+（2）第二题？
+A、甲
+B、乙
+答案：A`
+    const r = ok(md)
+    expect(r.questions).toHaveLength(2)
+    expect(r.questions[0].stem).toBe('第一题（）')
+    expect(r.questions[0].answer).toEqual(['B'])
+    expect(r.questions[1].stem).toBe('第二题？')
+    expect(r.questions[1].answer).toEqual(['A'])
+  })
+
+  it('题干前的（单选）/【多选】当作题型提示并剥掉', () => {
+    const single = ok(`1. （单选）三加二等于几？
+A. 4
+B. 5
+答案：B`)
+    expect(single.questions[0].stem).toBe('三加二等于几？')
+    expect(single.questions[0].type).toBe('single')
+
+    const multi = ok(`1. 【多选】哪些是水果？
+A. 苹果
+B. 白菜
+C. 香蕉
+答案：A,C`)
+    expect(multi.questions[0].stem).toBe('哪些是水果？')
+    expect(multi.questions[0].type).toBe('multiple')
+  })
+
+  it('题尾的（多选）也剥掉，但空括号（）保留', () => {
+    const r = ok(`1. 下列哪些是水果？（多选）
+A. 苹果
+B. 白菜
+答案：A,B
+
+2. 下列说法正确的是（）
+A. 甲
+B. 乙
+答案：A`)
+    expect(r.questions[0].stem).toBe('下列哪些是水果？')
+    expect(r.questions[0].type).toBe('multiple')
+    // 空括号是题干的一部分，不能当成题型标记吃掉
+    expect(r.questions[1].stem).toBe('下列说法正确的是（）')
+    expect(r.questions[1].type).toBe('single')
+  })
+})

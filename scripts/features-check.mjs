@@ -145,7 +145,9 @@ try {
   await page.waitForSelector('.reveal', { timeout: 4000 })
   const revealClass = await page.$eval('.reveal', (el) => el.className)
   const correctCount = await page.$$eval('.option.correct', (els) => els.length)
-  if (correctCount !== 1) throw new Error(`练习模式没有标出正确项：${correctCount}`)
+  // 抽题是随机的，第一题可能是多选（AB 两个正确项），按题型判断
+  const expected = typeLabel.includes('多选') ? 2 : 1
+  if (correctCount !== expected) throw new Error(`练习模式标出的正确项数量不对：${correctCount}（${typeLabel}）`)
   await page.screenshot({ path: 'docs/shots/14-practice-mode.png' })
 
   console.log('step: draft restore')

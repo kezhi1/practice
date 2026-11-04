@@ -8,7 +8,8 @@ import type { Option, ParseIssue, ParseResult, ParsedQuestion, QType } from '../
 const FENCE_RE = /^\s*(```|~~~)/
 const HEADING_RE = /^\s*(#{1,4})\s+(.+?)\s*#*\s*$/
 const HR_RE = /^\s*(?:-{3,}|\*{3,}|_{3,})\s*$/
-const NUMBERED_RE = /^\s*(?:\*\*)?(\d+)\s*[.、)）]\s+(?:\*\*)?(.+?)\s*$/
+/** 1. / 1．/ 1、/ 1) / （1） 都能当题号；句点后允许没有空格 */
+const NUMBERED_RE = /^\s*(?:\*\*)?(?:[（(]\s*\d+\s*[）)]|\d+\s*[.．、)）])\s*(?:\*\*)?(.+?)\s*$/
 /** - (A) 内容 / (A) 内容 */
 const BRACKET_OPT_RE = /^\s*(?:[-*+]\s+)?[（(【]\s*([A-Za-z])\s*[)）】]\s*[.．、:：]?\s*(.+?)\s*$/
 /** - A. 内容 / - A、内容 / A. 内容 / A：内容 */
@@ -184,7 +185,7 @@ function findStarts(lines: string[], from: number): { line: number; text: string
       continue
     }
     const n = NUMBERED_RE.exec(raw)
-    if (n) numberedStarts.push({ line: i, text: n[2].trim() })
+    if (n) numberedStarts.push({ line: i, text: n[1].trim() })
   }
   void inFence
 
@@ -306,6 +307,23 @@ function finalizeDraft(draft: Draft, issues: ParseIssue[]): ParsedQuestion[] {
   }
   const short = stem.slice(0, 20).replace(/\n/g, ' ')
 
+  // 「（单选）题干」「【多选】题干」这种题型前缀：剥掉，顺便当题型提示
+  let typeHint = draft.typeHint
+  let cleanStem = stem
+  const typePrefix = /^\s*[\[（(【]\s*(单项选择|多项选择|单选|多选|不定项|判断|填空)\s*[\]）)】]\s*/.exec(stem)
+  if (typePrefix) {
+    const t = normalizeType(typePrefix[1])
+    if (t && !typeHint) typeHint = t
+    cleanStem = stem.slice(typePrefix[0].length).trim()
+  }
+  // 题尾的「（多选）」「【判断】」也一样：剥掉并当题型提示
+  const typeSuffix = /[\s　]*[\[（(【]\s*(单项选择|多项选择|单选|多选|不定项|判断|填空)\s*[\]）)】]\s*$/.exec(cleanStem)
+  if (typeSuffix) {
+    const t = normalizeType(typeSuffix[1])
+    if (t && !typeHint) typeHint = t
+    cleanStem = cleanStem.slice(0, typeSuffix.index).trim()
+  }
+
   let options = draft.options
   const answerRaw = draft.answerRaw.trim()
 
@@ -372,7 +390,7 @@ function finalizeDraft(draft: Draft, issues: ParseIssue[]): ParsedQuestion[] {
     return []
   }
 
-  const type: QType = draft.typeHint ?? (judge ? 'judge' : unique.length > 1 ? 'multiple' : 'single')
+  const type: QType = typeHint ?? (judge ? 'judge' : unique.length > 1 ? 'multiple' : 'single')
 
   // 宽容但不在“意思”上猜：题型和答案个数打架时，宁可拒收也不擅自改判
   if (type === 'judge' && unique.length > 1) {
@@ -399,7 +417,7 @@ function finalizeDraft(draft: Draft, issues: ParseIssue[]): ParsedQuestion[] {
   return [
     {
       type,
-      stem,
+      stem: cleanStem,
       options,
       answer: unique,
       explanation: draft.explanation.join('\n').replace(/\n{3,}/g, '\n\n').trim(),

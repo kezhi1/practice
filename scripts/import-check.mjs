@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import puppeteer from 'puppeteer-core'
 
 const EDGE = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'
@@ -87,5 +88,12 @@ console.log('--- 无标题编号写法 ---')
 console.log(await importOnce(numbered, '12-numbered-preview'))
 console.log('--- 严格模式下的歧义写法 ---')
 console.log(await importOnce(strictBad, '13-strict-error'))
+
+console.log('--- examples/编号式示例.md（真实文件导入）---')
+const numberedFile = readFileSync(new URL('../examples/编号式示例.md', import.meta.url), 'utf8')
+const numberedText = await importOnce(numberedFile, '23-numbered-file')
+console.log(numberedText)
+if (!numberedText.includes('5 题可导入')) throw new Error('编号式示例应解析出 5 题')
+if (numberedText.includes('个错误')) throw new Error('编号式示例不应有错误')
 console.log('errors', errors)
 await browser.close()

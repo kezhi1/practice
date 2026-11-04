@@ -136,7 +136,7 @@ export default function ImportView({ onDone, onCancel }: Props) {
               <tr>
                 <th>分题</th>
                 <td>
-                  <code>#</code> ~ <code>####</code> 标题；全篇没有标题时按 <code>1.</code> <code>2.</code> 编号分题
+                  <code>#</code> ~ <code>####</code> 标题；没有标题时按 <code>1.</code> <code>1．</code> <code>（1）</code> 编号分题
                 </td>
               </tr>
               <tr>
