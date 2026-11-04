@@ -5,7 +5,7 @@ import { TYPE_LABEL, type Bank, type Question } from '../types'
 
 interface Props {
   onBack: () => void
-  onPractice: () => void
+  onPractice: (bankId?: string) => void
   onOpenBank: (bankId: string) => void
 }
 
@@ -69,6 +69,10 @@ export default function WrongBook({ onBack, onPractice, onOpenBank }: Props) {
     return [...map.entries()]
   }, [rows])
 
+  // 「开始错题练习」跟着知识库筛选走：选了某个库就只练这个库的错题
+  const scopedCount =
+    bankFilter === 'all' ? rows.length : rows.filter((r) => r.q.bankId === bankFilter).length
+
   async function master(id: string) {
     await db.questions.update(id, { wrongCount: 0 })
     setRows((prev) => prev.filter((r) => r.q.id !== id))
@@ -104,8 +108,12 @@ export default function WrongBook({ onBack, onPractice, onOpenBank }: Props) {
               全部标为已掌握
             </button>
           )}
-          <button className="btn primary" disabled={!rows.length} onClick={onPractice}>
-            开始错题练习{rows.length ? `（${Math.min(50, rows.length)} 题）` : ''}
+          <button
+            className="btn primary"
+            disabled={scopedCount === 0}
+            onClick={() => onPractice(bankFilter === 'all' ? undefined : bankFilter)}
+          >
+            开始错题练习{scopedCount ? `（${Math.min(50, scopedCount)} 题）` : ''}
           </button>
         </div>
       </div>

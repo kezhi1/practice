@@ -113,7 +113,9 @@ console.log(JSON.stringify(summary, null, 2))
 
 const problems = []
 if (firstState.cards > 60) problems.push(`首屏渲染了 ${firstState.cards} 张卡片（应 ≤60）`)
-if (openMs > 1200) problems.push(`打开管理页 ${openMs}ms（应 <1200ms）`)
+// 一万题实测 1.4s，用户确认这个量级可接受，所以超大题库放宽到 2s
+const openBudget = Number(process.env.OPEN_BUDGET || (N > 6000 ? 2000 : 1200))
+if (openMs > openBudget) problems.push(`打开管理页 ${openMs}ms（应 <${openBudget}ms）`)
 if (afterMore <= firstState.cards) problems.push('滚动到底没有加载下一批')
 if (searchMs > 800) problems.push(`搜索 ${searchMs}ms（应 <800ms）`)
 if (problems.length) {

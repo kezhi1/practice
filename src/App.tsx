@@ -154,7 +154,9 @@ export default function App() {
         {route.name === 'wrong' && (
           <WrongBook
             onBack={toBanks}
-            onPractice={() => go({ name: 'quiz', sourceKey: 'wrong' })}
+            onPractice={(bankId) =>
+              go({ name: 'quiz', sourceKey: bankId ? `wrong:${bankId}` : 'wrong' })
+            }
             onOpenBank={(bankId) => go({ name: 'bank', bankId })}
           />
         )}

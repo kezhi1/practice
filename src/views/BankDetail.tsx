@@ -1,6 +1,7 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react'
 import { db, deleteBank, stemKey, uid } from '../db'
 import { renderInline } from '../lib/markdown'
+import { bankToMarkdown, downloadText, markdownFileName } from '../lib/exportMd'
 import { TYPE_LABEL, type Bank, type QType, type Question } from '../types'
 
 interface Props {
@@ -133,6 +134,11 @@ export default function BankDetail({ bankId, onBack, onQuiz }: Props) {
     setRenaming(false)
   }
 
+  function exportMarkdown() {
+    if (!bank || questions.length === 0) return
+    downloadText(markdownFileName(bank.title), bankToMarkdown(bank, questions))
+  }
+
   async function removeBank() {
     if (!bank) return
     if (!window.confirm(`删除知识库「${bank.title}」及全部 ${questions.length} 道题？`)) return
@@ -188,6 +194,14 @@ export default function BankDetail({ bankId, onBack, onQuiz }: Props) {
           </button>
           <button className="btn ghost" onClick={() => setEditing('new')}>
             新增题目
+          </button>
+          <button
+            className="btn ghost"
+            onClick={exportMarkdown}
+            disabled={questions.length === 0}
+            title="导出成 Markdown，可以再导入，也可以发给别人"
+          >
+            导出 .md
           </button>
           <button className="btn danger-ghost" onClick={() => void removeBank()}>
             删除知识库

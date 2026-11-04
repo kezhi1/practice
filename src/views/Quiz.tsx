@@ -23,7 +23,8 @@ import {
 
 export type QuizSource =
   | { kind: 'bank'; bankId: string }
-  | { kind: 'wrong' }
+  /** bankId 有值时只练这个题库的错题 */
+  | { kind: 'wrong'; bankId?: string }
   | { kind: 'fav' }
   | { kind: 'review' }
 
@@ -56,7 +57,9 @@ export default function Quiz({ source, onFinish, onExit }: Props) {
     source.kind === 'bank'
       ? `bank:${source.bankId}`
       : source.kind === 'wrong'
-        ? 'wrong'
+        ? source.bankId
+          ? `wrong:${source.bankId}`
+          : 'wrong'
         : source.kind === 'fav'
           ? 'fav'
           : 'review'
@@ -99,8 +102,15 @@ export default function Quiz({ source, onFinish, onExit }: Props) {
       } else {
         const list = await db.questions.toArray()
         if (source.kind === 'wrong') {
-          pool = list.filter((q) => q.wrongCount > 0)
-          title = '错题练习'
+          pool = source.bankId
+            ? list.filter((q) => q.wrongCount > 0 && q.bankId === source.bankId)
+            : list.filter((q) => q.wrongCount > 0)
+          if (source.bankId) {
+            const only = await db.banks.get(source.bankId)
+            title = only ? `错题练习 · ${only.title}` : '错题练习'
+          } else {
+            title = '错题练习'
+          }
         } else if (source.kind === 'fav') {
           pool = list.filter((q) => q.fav)
           title = '收藏练习'

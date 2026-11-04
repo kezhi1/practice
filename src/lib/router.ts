@@ -66,12 +66,15 @@ export function toHash(route: Route): string {
 
 /** 刷题源 → sourceKey（`bank:<id>` / `wrong` / `fav` / `review`） */
 export function sourceKeyOf(source: import('../views/Quiz').QuizSource): string {
-  return source.kind === 'bank' ? `bank:${source.bankId}` : source.kind
+  if (source.kind === 'bank') return `bank:${source.bankId}`
+  if (source.kind === 'wrong' && source.bankId) return `wrong:${source.bankId}`
+  return source.kind
 }
 
 export function sourceOfKey(key: string): import('../views/Quiz').QuizSource {
   if (key.startsWith('bank:')) return { kind: 'bank', bankId: key.slice('bank:'.length) }
   if (key === 'wrong') return { kind: 'wrong' }
+  if (key.startsWith('wrong:')) return { kind: 'wrong', bankId: key.slice('wrong:'.length) }
   if (key === 'fav') return { kind: 'fav' }
   return { kind: 'review' }
 }
