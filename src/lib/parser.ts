@@ -163,12 +163,39 @@ function parseFrontMatter(lines: string[]): { title?: string; tags: string[]; bo
   return { title, tags, bodyStart: end + 1 }
 }
 
+/**
+ * 分节标题（`## 一、单项选择题`、`# 第一章 概述`）不是题目，只是下面编号题的组名。
+ * 判断方法：往后看第一段有效内容——先遇到选项/答案，说明这行是题干；先遇到下一个标题或
+ * 编号题，说明它只是个分节标题。
+ */
+function looksLikeSectionTitle(lines: string[], headingLine: number): boolean {
+  let fence = false
+  for (let i = headingLine + 1; i < lines.length; i++) {
+    const raw = lines[i]
+    if (FENCE_RE.test(raw)) {
+      fence = !fence
+      continue
+    }
+    if (fence) continue
+    const t = raw.trim()
+    if (!t || HR_RE.test(t)) continue
+    if (HEADING_RE.test(t)) return true
+    if (NUMBERED_RE.test(t)) return true
+    if (matchOption(t, true) || readMeta(t)) return false
+    // 普通正文（多行题干）给一点余量，太远就当题干
+    if (i - headingLine > 6) return false
+  }
+  return false
+}
+
 /** 找出每道题的起始行 */
 function findStarts(lines: string[], from: number): { line: number; text: string }[] {
   const inFence = (line: string, state: boolean) => (FENCE_RE.test(line) ? !state : state)
 
   const headingStarts: { line: number; text: string }[] = []
   const numberedStarts: { line: number; text: string }[] = []
+  const numberedInSection: { line: number; text: string }[] = []
+  let section = false
   let fence = false
 
   for (let i = from; i < lines.length; i++) {
@@ -181,15 +208,32 @@ function findStarts(lines: string[], from: number): { line: number; text: string
 
     const h = HEADING_RE.exec(raw)
     if (h) {
-      headingStarts.push({ line: i, text: h[2].trim() })
+      if (looksLikeSectionTitle(lines, i)) {
+        section = true
+        continue
+      }
+      section = false
+      // 标题里的题号（`## 1. 题干`）和编号题一样，不算进题干
+      const hm = NUMBERED_RE.exec(h[2].trim())
+      headingStarts.push({ line: i, text: hm ? hm[1].trim() : h[2].trim() })
       continue
     }
     const n = NUMBERED_RE.exec(raw)
-    if (n) numberedStarts.push({ line: i, text: n[1].trim() })
+    if (n) {
+      const start = { line: i, text: n[1].trim() }
+      numberedStarts.push(start)
+      if (section) numberedInSection.push(start)
+    }
   }
   void inFence
 
-  if (headingStarts.length) return headingStarts
+  if (headingStarts.length) {
+    // 有分节标题时，节内的编号题也要算题目
+    if (numberedInSection.length) {
+      return [...headingStarts, ...numberedInSection].sort((a, b) => a.line - b.line)
+    }
+    return headingStarts
+  }
   if (numberedStarts.length) return numberedStarts
   // 既没有标题也没有编号：整篇当一道题
   const first = lines.findIndex((l, idx) => idx >= from && l.trim())

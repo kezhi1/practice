@@ -49,5 +49,10 @@ export default defineConfig({
   // 相对路径，便于部署到 GitHub Pages 这类子路径下
   base: './',
   plugins: [react(), swPrecache()],
-  server: { port: 5173, strictPort: false },
+  server: {
+    port: 5173,
+    strictPort: false,
+    // Windows 下某些工具会在仓库里生成临时目录，被监听会偶发 EBUSY 把 dev server 弄崩
+    watch: { ignored: ['**/*.tmpdir/**', '**/.~*'] },
+  },
 })

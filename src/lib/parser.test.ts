@@ -254,3 +254,76 @@ B. 乙
     expect(r.questions[1].type).toBe('single')
   })
 })
+
+describe('解析：分节标题 + 编号题', () => {
+  it('「## 一、单项选择题」是分节标题，不当成题干', () => {
+    const md = `## 一、单项选择题
+
+1. Chinese Wall 模型的设计宗旨是：
+- A. 用户只能访问哪些与已经拥有的信息不冲突的信息
+- B. 用户可以访问所有信息
+- C. 用户可以访问所有已经选择的信息
+- D. 用户不可以访问哪些没有选择的信息
+
+> 答案：A
+
+2. 安全责任分配的基本原则是：
+- A. “三分靠技术，七分靠管理”
+- B. “七分靠技术，三分靠管理”
+- C. “谁主管，谁负责”
+- D. 防火墙技术
+
+> 答案：C
+
+3. 保证计算机信息运行的安全……以下（）不属于信息运行安全技术的范畴
+- A. 风险分析
+- B. 审计跟踪技术
+- C. 应急技术
+- D. 防火墙技术
+
+> 答案：B
+`
+    const r = ok(md)
+    expect(r.questions).toHaveLength(3)
+    expect(r.questions[0].stem).toBe('Chinese Wall 模型的设计宗旨是：')
+    expect(r.questions[0].answer).toEqual(['A'])
+    expect(r.questions[1].stem).toBe('安全责任分配的基本原则是：')
+    expect(r.questions[1].answer).toEqual(['C'])
+    expect(r.questions[2].stem).toContain('以下（）不属于信息运行安全技术的范畴')
+    expect(r.questions[2].type).toBe('single')
+    // 分节标题不能出现在任何题干的里
+    expect(r.questions.some((q) => q.stem.includes('单项选择题'))).toBe(false)
+  })
+
+  it('多行章节标题（# 第一章 概述）也不会吞掉后面的编号题', () => {
+    const md = `# 第一章 概述
+
+这一章讲基础概念。
+
+1. 第一题
+A. 甲
+B. 乙
+答案：A
+
+2. 第二题
+A. 甲
+B. 乙
+答案：B
+`
+    const r = ok(md)
+    expect(r.questions).toHaveLength(2)
+    expect(r.questions[0].stem).toBe('第一题')
+  })
+
+  it('标题就是题干时照旧（标题后直接跟选项）', () => {
+    const md = `## 1. 题干在标题里
+
+- A. 甲
+- B. 乙
+
+> 答案：A`
+    const r = ok(md)
+    expect(r.questions).toHaveLength(1)
+    expect(r.questions[0].stem).toBe('题干在标题里')
+  })
+})

@@ -48,12 +48,25 @@ const browser = await puppeteer.launch({
   headless: 'new',
   defaultViewport: { width: 1360, height: 1000 },
 })
-const page = await browser.newPage()
 const errors = []
+let page = await browser.newPage()
 page.on('pageerror', (e) => errors.push(e.message))
 
 async function importOnce(md, name) {
-  await page.goto('http://localhost:5173', { waitUntil: 'networkidle0' })
+  if (page.isClosed()) {
+    page = await browser.newPage()
+    page.on('pageerror', (e) => errors.push(e.message))
+  }
+  try {
+    await page.goto('http://localhost:5173', { waitUntil: 'networkidle0' })
+  } catch (e) {
+    // 上一轮截图/导航把 frame 弄丢了：换一个页面重来
+    console.log('页面失联，重开：', e.message.split(String.fromCharCode(10))[0])
+    await page.close().catch(() => {})
+    page = await browser.newPage()
+    page.on('pageerror', (err) => errors.push(err.message))
+    await page.goto('http://localhost:5173', { waitUntil: 'networkidle0' })
+  }
   const buttons = await page.$$('button')
   for (const h of buttons) {
     const t = await page.evaluate((el) => el.textContent ?? '', h)
@@ -95,5 +108,13 @@ const numberedText = await importOnce(numberedFile, '23-numbered-file')
 console.log(numberedText)
 if (!numberedText.includes('5 题可导入')) throw new Error('编号式示例应解析出 5 题')
 if (numberedText.includes('个错误')) throw new Error('编号式示例不应有错误')
+console.log('--- examples/分节标题示例.md（## 一、单项选择题 + 编号题）---')
+const sectionFile = readFileSync(new URL('../examples/分节标题示例.md', import.meta.url), 'utf8')
+const sectionText = await importOnce(sectionFile, '25-section-preview')
+console.log(sectionText)
+if (!sectionText.includes('3 题可导入')) throw new Error('分节标题示例应解析出 3 题')
+if (sectionText.includes('个错误')) throw new Error('分节标题示例不应有错误')
+if (sectionText.includes('单项选择题')) throw new Error('分节标题被当成题干了')
+
 console.log('errors', errors)
 await browser.close()
