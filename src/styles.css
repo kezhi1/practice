@@ -1043,6 +1043,9 @@ kbd {
   padding: 5px 10px;
   font-size: 12.5px;
 }
+.segmented button {
+  white-space: nowrap;
+}
 
 /* 恢复进度提示 */
 .restore-bar {
@@ -1336,4 +1339,114 @@ html[data-fs='2'] .reveal .explain {
   gap: 8px;
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+
+/* ---------- 移动端（<=760px） ---------- */
+@media (max-width: 760px) {
+  .topbar {
+    /* 手机上不吸顶：两行导航太占高度，留给内容 */
+    position: static;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 12px;
+  }
+  .brand {
+    font-size: 16px;
+  }
+  .brand span {
+    display: none;
+  }
+  .topbar-actions {
+    width: 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+  .topbar-actions::-webkit-scrollbar {
+    display: none;
+  }
+  .topbar-actions .btn {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    padding: 7px 10px;
+    font-size: 13px;
+  }
+  .wide-only {
+    display: none;
+  }
+
+  .container {
+    padding: 18px 14px 64px;
+  }
+
+  /* 答题页顶部：标题一行、控制条一行 */
+  .quiz-top {
+    flex-wrap: wrap;
+    gap: 8px 10px;
+    padding: 10px 12px;
+  }
+  .quiz-top > .row {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+  .quiz-top > .row:last-child {
+    justify-content: space-between;
+  }
+  .quiz-top > .row:first-child strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .segmented button,
+  .fs-btn {
+    white-space: nowrap;
+  }
+  /* 手机没有实体键盘，快捷键提示没意义 */
+  .kbd-hint {
+    display: none;
+  }
+
+  /* 标题 + 右侧操作：竖排，别挤在一起 */
+  .row.between.wrap {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .row.between.wrap > div {
+    min-width: 0;
+  }
+  .wrong-item .q-head .btn {
+    margin-left: auto;
+  }
+}
+
+/* 手机上答题页顶部再收一档 */
+@media (max-width: 480px) {
+  .quiz-top > .row:last-child {
+    flex-wrap: nowrap;
+    gap: 6px;
+  }
+  .quiz-top .segmented button {
+    padding: 5px 7px;
+    font-size: 12px;
+  }
+  .quiz-top .timer {
+    flex: 0 0 auto;
+    font-size: 13px;
+  }
+  .quiz-top .fs-label {
+    display: none;
+  }
+  .quiz-top .fs-btn {
+    padding: 4px 6px;
+  }
+  .quiz-top .btn.primary {
+    flex: 0 0 auto;
+    padding: 8px 12px;
+    white-space: nowrap;
+  }
 }
