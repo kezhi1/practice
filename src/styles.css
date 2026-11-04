@@ -1209,3 +1209,131 @@ kbd {
     transform: translate(-50%, 0);
   }
 }
+
+/* ---------- 字号档位（设置写在 <html data-fs>） ---------- */
+html[data-fs='1'] .stem {
+  font-size: 17.5px;
+}
+html[data-fs='1'] .option {
+  font-size: 16px;
+}
+html[data-fs='1'] .reveal .explain {
+  font-size: 15.5px;
+}
+
+html[data-fs='2'] .stem {
+  font-size: 19.5px;
+}
+html[data-fs='2'] .option {
+  font-size: 17.5px;
+}
+html[data-fs='2'] .reveal .explain {
+  font-size: 17px;
+}
+
+.fs-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 1px;
+}
+.fs-btn {
+  border: none;
+  background: transparent;
+  color: var(--fg);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 4px 7px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+.fs-btn:hover:not(:disabled) {
+  background: var(--bg);
+}
+.fs-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.fs-label {
+  font-size: 11.5px;
+  color: var(--muted);
+  padding: 0 2px;
+  min-width: 22px;
+  text-align: center;
+}
+
+/* ---------- 答题卡状态 ---------- */
+.dot.blank {
+  border-style: dashed;
+}
+.dot.wrong {
+  border-color: var(--red);
+  background: var(--red-soft);
+  color: var(--red);
+}
+.dot.current.wrong {
+  background: var(--red);
+  color: #fff;
+}
+.dot-legend {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 11.5px;
+}
+.dot-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.dot-legend .lg {
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  display: inline-block;
+}
+.dot-legend .lg.done {
+  background: var(--primary-soft);
+  border-color: color-mix(in srgb, var(--primary) 40%, transparent);
+}
+.dot-legend .lg.blank {
+  border-style: dashed;
+}
+.dot-legend .lg.wrong {
+  background: var(--red-soft);
+  border-color: var(--red);
+}
+
+/* ---------- 交卷确认弹窗 ---------- */
+.modal-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.42);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  z-index: 50;
+}
+.modal {
+  width: min(420px, 100%);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.22);
+}
+.modal h3 {
+  margin: 0 0 6px;
+  font-size: 17px;
+}
+.modal p {
+  margin: 0 0 16px;
+}
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}

@@ -3,7 +3,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 const EDGE = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'
-const BASE = process.env.BASE_URL || 'http://127.0.0.1:5173'
+// 用 localhost 而不是 127.0.0.1：Vite 默认只监听 IPv6 的 localhost，127.0.0.1 会连不上
+const BASE = process.env.BASE_URL || 'http://localhost:5173'
 const OUT = path.resolve('docs/shots')
 fs.mkdirSync(OUT, { recursive: true })
 
@@ -11,15 +12,15 @@ function buildMarkdown(n = 60) {
   const lines = ['---', 'title: 计算机网络基础', 'tags: [网络, 面试]', '---', '']
   for (let i = 1; i <= n; i++) {
     if (i % 3 === 0) {
-      lines.push(`## ${i}. 路由器工作在 OSI 模型的哪一层？`)
+      lines.push(`## ${i}. 路由器工作在 OSI 模型的哪一层？（第 ${i} 号）`)
       lines.push('- A. 物理层', '- B. 网络层', '- C. 应用层', '- D. 传输层')
       lines.push('> 答案：B', `> 解析：第 ${i} 题解析：路由器依据 IP 地址转发，属于三层设备。`, '> 难度：2')
     } else if (i % 3 === 1) {
-      lines.push(`## ${i}. 下列哪些属于传输层协议？`)
+      lines.push(`## ${i}. 下列哪些属于传输层协议？（第 ${i} 号）`)
       lines.push('- A. TCP', '- B. UDP', '- C. HTTP', '- D. ICMP')
       lines.push('> 答案：A,B', `> 解析：第 ${i} 题解析：HTTP 是应用层，ICMP 是网络层。`, '> 类型：多选')
     } else {
-      lines.push(`## ${i}. TCP 是面向连接的可靠传输协议。`)
+      lines.push(`## ${i}. TCP 是面向连接的可靠传输协议吗？（第 ${i} 号）`)
       lines.push('- A. 正确', '- B. 错误')
       lines.push('> 答案：对', `> 解析：第 ${i} 题解析：TCP 通过三次握手、确认重传保证可靠。`, '> 类型：判断')
     }
@@ -44,6 +45,17 @@ async function clickText(page, text, tag = 'button') {
     }
   }
   throw new Error(`找不到可点击的「${text}」`)
+}
+
+// 交卷现在会先问「还有 N 题没作答」，自动化里直接确认
+async function submitAndConfirm(page) {
+  await clickText(page, '交卷')
+  await new Promise((r) => setTimeout(r, 250))
+  const modal = await page.$('.modal')
+  if (modal) {
+    await clickText(page, '直接交卷')
+    await new Promise((r) => setTimeout(r, 200))
+  }
 }
 
 async function shot(page, name) {
@@ -110,7 +122,8 @@ try {
     if (opts.length) await opts[i % opts.length].click()
     if (i === 5) await shot(page, '04-quiz')
     const next = await page.$('.btn.primary')
-    await clickText(page, i === 11 ? '交卷' : '下一题')
+    if (i === 11) await submitAndConfirm(page)
+    else await clickText(page, '下一题')
     await new Promise((r) => setTimeout(r, 60))
     void next
   }
@@ -140,7 +153,8 @@ try {
     for (let i = 0; i < 3; i++) {
       const opts = await page.$$('.option')
       if (opts.length) await opts[0].click()
-      await clickText(page, i === 2 ? '交卷' : '下一题')
+      if (i === 2) await submitAndConfirm(page)
+      else await clickText(page, '下一题')
       await new Promise((r) => setTimeout(r, 60))
     }
     await page.waitForFunction(() => document.body.innerText.includes('练习结果'), { timeout: 8000 })

@@ -10,6 +10,7 @@ import {
   WRONG_BANK_ID,
 } from '../db'
 import { renderInline } from '../lib/markdown'
+import { FONT_LABEL, loadFontScale, saveFontScale, type FontScale } from '../lib/prefs'
 import { isDue, needsFirstSchedule, nextReview } from '../lib/srs'
 import { formatDuration, sameSet } from '../lib/util'
 import {
@@ -72,8 +73,14 @@ export default function Quiz({ source, onFinish, onExit }: Props) {
   const [startedAt, setStartedAt] = useState(0)
   const [now, setNow] = useState(Date.now())
   const [submitting, setSubmitting] = useState(false)
+  const [fontScale, setFontScale] = useState<FontScale>(loadFontScale)
+  /** 交卷确认弹窗：未作答时先拦一下 */
+  const [confirmUnanswered, setConfirmUnanswered] = useState<number | null>(null)
   const dotsRef = useRef<HTMLDivElement>(null)
   const poolRef = useRef<Question[]>([])
+  /** 交卷成功后不该再补写草稿 */
+  const finishedRef = useRef(false)
+  const draftRef = useRef<Parameters<typeof db.drafts.put>[0] | null>(null)
 
   // 抽题 / 恢复草稿
   useEffect(() => {
@@ -147,20 +154,32 @@ export default function Quiz({ source, onFinish, onExit }: Props) {
   // 自动保存草稿（防抖），刷新/关页面后可以接着答
   useEffect(() => {
     if (loading || questions.length === 0) return
+    const draft = {
+      sourceKey,
+      bankTitle,
+      questionIds: questions.map((q) => q.id),
+      answers,
+      flags: [...flags],
+      idx,
+      startedAt,
+      mode,
+    }
+    draftRef.current = draft
     const t = window.setTimeout(() => {
-      void db.drafts.put({
-        sourceKey,
-        bankTitle,
-        questionIds: questions.map((q) => q.id),
-        answers,
-        flags: [...flags],
-        idx,
-        startedAt,
-        mode,
-      })
+      void db.drafts.put(draft)
     }, 300)
     return () => window.clearTimeout(t)
   }, [loading, questions, answers, flags, idx, startedAt, mode, sourceKey, bankTitle])
+
+  // 页面被切走（点导航 / 浏览器后退）时可能来不及等防抖，这里补一手
+  useEffect(
+    () => () => {
+      if (finishedRef.current) return
+      const draft = draftRef.current
+      if (draft) void db.drafts.put(draft)
+    },
+    [],
+  )
 
   // 键盘：1-9 / A-D 选选项，← → 切题，Enter 下一题，F 标记
   useEffect(() => {
@@ -249,13 +268,31 @@ export default function Quiz({ source, onFinish, onExit }: Props) {
     setQuestions(drawQuestions(poolRef.current, loadDrawMode()))
   }
 
+  function changeFontScale(next: FontScale) {
+    setFontScale(next)
+    saveFontScale(next)
+  }
+
+  function jumpToFirstUnanswered() {
+    const i = questions.findIndex((q) => (answers[q.id] ?? []).length === 0)
+    if (i >= 0) setIdx(i)
+    setConfirmUnanswered(null)
+  }
+
+  /** 点「交卷」：先看有没有漏答，有就先弹窗，而不是直接丢分数 */
+  function requestSubmit() {
+    if (submitting || confirmUnanswered !== null) return
+    const unanswered = questions.filter((q) => (answers[q.id] ?? []).length === 0).length
+    if (unanswered > 0) {
+      setConfirmUnanswered(unanswered)
+      return
+    }
+    void submit()
+  }
+
   async function submit() {
     if (submitting) return
-    const answered = Object.values(answers).filter((a) => a.length > 0).length
-    if (answered < questions.length) {
-      const ok = window.confirm(`还有 ${questions.length - answered} 题没作答，确定交卷？`)
-      if (!ok) return
-    }
+    setConfirmUnanswered(null)
     setSubmitting(true)
     const finishedAt = Date.now()
     const score = questions.reduce((n, q) => n + (sameSet(answers[q.id] ?? [], q.answer) ? 1 : 0), 0)
@@ -297,6 +334,7 @@ export default function Quiz({ source, onFinish, onExit }: Props) {
       if (answeredThis) Object.assign(patch, nextReview(q, correct, finishedAt))
       if (Object.keys(patch).length > 1) await db.questions.update(q.id, patch)
     }
+    finishedRef.current = true
     onFinish(session)
   }
 
@@ -348,7 +386,28 @@ export default function Quiz({ source, onFinish, onExit }: Props) {
             </button>
           </div>
           <span className="timer">{formatDuration(now - startedAt)}</span>
-          <button className="btn primary" onClick={() => void submit()} disabled={submitting}>
+          <div className="fs-control" role="group" aria-label="字号">
+            <button
+              className="fs-btn"
+              onClick={() => changeFontScale(Math.max(0, fontScale - 1) as FontScale)}
+              disabled={fontScale === 0}
+              title="缩小字号"
+            >
+              A-
+            </button>
+            <span className="fs-label" title="当前字号">
+              {FONT_LABEL[fontScale]}
+            </span>
+            <button
+              className="fs-btn"
+              onClick={() => changeFontScale(Math.min(2, fontScale + 1) as FontScale)}
+              disabled={fontScale === 2}
+              title="放大字号"
+            >
+              A+
+            </button>
+          </div>
+          <button className="btn primary" onClick={requestSubmit} disabled={submitting}>
             交卷
           </button>
         </div>
@@ -445,17 +504,52 @@ export default function Quiz({ source, onFinish, onExit }: Props) {
           <div className="dots" ref={dotsRef}>
             {questions.map((item, i) => {
               const done = (answers[item.id] ?? []).length > 0
+              const missed =
+                mode === 'practice' && revealed.has(item.id) && !sameSet(answers[item.id] ?? [], item.answer)
+              const cls = [
+                'dot',
+                i === idx ? 'current' : '',
+                done ? 'done' : 'blank',
+                missed ? 'wrong' : '',
+                flags.has(item.id) ? 'flag' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')
+              const stateText = [
+                done ? '已答' : '未答',
+                missed ? '答错' : '',
+                flags.has(item.id) ? '标记' : '',
+              ]
+                .filter(Boolean)
+                .join(' · ')
               return (
                 <button
                   key={item.id}
-                  className={`dot ${i === idx ? 'current' : ''} ${done ? 'done' : ''} ${flags.has(item.id) ? 'flag' : ''}`}
+                  className={cls}
                   onClick={() => setIdx(i)}
-                  title={`第 ${i + 1} 题`}
+                  title={`第 ${i + 1} 题 · ${stateText}`}
+                  aria-label={`第 ${i + 1} 题，${stateText}`}
                 >
                   {i + 1}
                 </button>
               )
             })}
+          </div>
+          <div className="dot-legend">
+            <span>
+              <i className="lg done" />已答
+            </span>
+            <span>
+              <i className="lg blank" />未答
+            </span>
+            {mode === 'practice' && (
+              <span>
+                <i className="lg wrong" />答错
+              </span>
+            )}
+            <span>
+              <i className="lg flag" />★ 标记
+            </span>
           </div>
         </div>
 
@@ -464,7 +558,7 @@ export default function Quiz({ source, onFinish, onExit }: Props) {
             上一题
           </button>
           {idx === questions.length - 1 ? (
-            <button className="btn primary" onClick={() => void submit()} disabled={submitting}>
+            <button className="btn primary" onClick={requestSubmit} disabled={submitting}>
               交卷
             </button>
           ) : (
@@ -474,6 +568,28 @@ export default function Quiz({ source, onFinish, onExit }: Props) {
           )}
         </div>
       </article>
+
+      {confirmUnanswered !== null && (
+        <div className="modal-mask" role="dialog" aria-modal="true" aria-label="交卷确认">
+          <div className="modal card pad">
+            <h3>还有 {confirmUnanswered} 题没作答</h3>
+            <p className="muted small">
+              没作答的题不计入正确数，也不会记进错题本。交卷后仍可以在结果页逐题回看。
+            </p>
+            <div className="modal-actions">
+              <button className="btn ghost" onClick={() => setConfirmUnanswered(null)}>
+                继续作答
+              </button>
+              <button className="btn ghost" onClick={jumpToFirstUnanswered}>
+                跳到第一道未答
+              </button>
+              <button className="btn primary" onClick={() => void submit()} disabled={submitting}>
+                直接交卷
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   )
 }

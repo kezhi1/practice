@@ -181,6 +181,11 @@ try {
   await page.evaluate(() => {
     ;[...document.querySelectorAll('button')].find((b) => b.textContent.trim() === '交卷')?.click()
   })
+  await sleep(400)
+  // 有新弹窗：还有未答题时先确认，再继续
+  await page.evaluate(() => {
+    ;[...document.querySelectorAll('.modal button')].find((b) => b.textContent.includes('直接交卷'))?.click()
+  })
   await sleep(800)
   const draftGone = await page.evaluate(
     () =>

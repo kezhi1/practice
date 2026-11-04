@@ -149,11 +149,17 @@ P0 已完成并跑通（`E:\practice`）：导入 → 解析校验 → 入库 �
 | 间隔复习（10 分钟 → 30 天阶梯） | ✅ | `src/lib/srs.ts`、`src/views/Review.tsx` |
 | PWA（manifest + Service Worker 离线） | ✅ | `public/manifest.webmanifest`、`public/sw.js` |
 | 功能自检 / 离线自检脚本 | ✅ | `scripts/features-check.mjs`、`scripts/pwa-check.mjs` |
+| 漏答确认弹窗（继续 / 跳到未答 / 直接交卷） | ✅ | `src/views/Quiz.tsx` |
+| 答题卡四态（已答 / 未答 / 答错 / 标记）+ 图例 | ✅ | `src/views/Quiz.tsx`、`src/styles.css` |
+| 字号三档（本地记忆） | ✅ | `src/lib/prefs.ts` |
+| hash 路由（刷新 / 书签 / 前进后退不丢页） | ✅ | `src/lib/router.ts`、`src/App.tsx` |
 
 P1 已完成：**错题本独立页**（跨库汇总、排序/筛选/搜索、标为已掌握、错题练习）+ **宽容解析**（15 个 vitest 用例覆盖）。
 
 **明确的边界（2026-10-30 确认）**：只在单台设备使用，不做 JSON 备份/迁移；题目不含数学公式，不做 KaTeX；判断题「只写答案对/错」时仍自动补选项（唯一保留的自动补全）。
 
 P2 已完成（2026-11-03）：**即时反馈（练习模式）**、**间隔重复复习**、**收藏夹**、**抽题策略**、**断点续答**、**PWA 离线安装**。
+
+P3 已完成（2026-11-04）：**漏答确认**、**答题卡状态**、**字号三档**、**hash 路由**。
 
 尚未做：弱项统计、题库批量操作、跨库重复题检测、移动端专门布局。
