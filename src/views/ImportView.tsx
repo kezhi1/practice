@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
 import { db, listBanks, stemKey, uid } from '../db'
 import { parseMarkdown, TEMPLATE_MARKDOWN } from '../lib/parser'
+import { AI_IMPORT_PROMPT } from '../lib/importPrompt'
 import { renderInline } from '../lib/markdown'
 import type { Bank, Question } from '../types'
 
@@ -53,6 +54,28 @@ export default function ImportView({ onDone, onCancel }: Props) {
     a.download = 'template.md'
     a.click()
     URL.revokeObjectURL(url)
+  }
+
+  const [copied, setCopied] = useState(false)
+
+  async function copyPrompt() {
+    try {
+      await navigator.clipboard.writeText(AI_IMPORT_PROMPT)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1800)
+    } catch {
+      // 没剪贴板权限（http 下的某些浏览器）就退化成选中文本，让用户自己复制
+      const ta = document.createElement('textarea')
+      ta.value = AI_IMPORT_PROMPT
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1800)
+    }
   }
 
   async function doImport() {
@@ -119,6 +142,9 @@ export default function ImportView({ onDone, onCancel }: Props) {
           <button className="btn ghost" onClick={downloadTemplate}>
             下载模板
           </button>
+          <button className="btn ghost" onClick={() => void copyPrompt()} title="粘贴到 AI 对话框里，让它按格式整理">
+            {copied ? '已复制 ✓' : '复制 AI 提示词'}
+          </button>
           <button className="btn ghost" onClick={onCancel}>
             返回
           </button>
@@ -150,7 +176,7 @@ export default function ImportView({ onDone, onCancel }: Props) {
                 <th>答案</th>
                 <td>
                   <code>&gt; 答案：A</code> · <code>答案 A</code> · <code>**答案：A**</code> · <code>【答案】A</code> ·
-                  <code>正确答案是 B</code>
+                  <code>正确答案是 B</code>；也认直接写在题干末尾的 <code>（B）</code> <code>（AB）</code>
                 </td>
               </tr>
               <tr>
@@ -162,7 +188,8 @@ export default function ImportView({ onDone, onCancel }: Props) {
               <tr>
                 <th>判断</th>
                 <td>
-                  只写 <code>&gt; 答案：对</code> 就行，选项自动补成 <code>A. 正确</code> / <code>B. 错误</code>
+                  <code>对</code> <code>错</code> <code>√</code> <code>×</code> <code>T</code> <code>F</code> 都认；只写
+                  <code>&gt; 答案：对</code> 时选项自动补成 <code>A. 正确</code> / <code>B. 错误</code>
                 </td>
               </tr>
               <tr>
@@ -174,7 +201,8 @@ export default function ImportView({ onDone, onCancel }: Props) {
               <tr>
                 <th>代码块</th>
                 <td>
-                  <code>```</code> 里面的 <code>##</code>、<code>- A.</code> 不会被当成新题
+                  整篇被 <code>```</code> 包住（AI 常这么输出）会自动拆开；解题代码里的 <code>##</code>、
+                  <code>- A.</code> 仍不会被当成新题
                 </td>
               </tr>
             </tbody>
@@ -182,6 +210,8 @@ export default function ImportView({ onDone, onCancel }: Props) {
           <p className="muted small">
             底线是不猜：写法有歧义（单选却给了多个答案、题型写错、答案不在选项里）就报错并指出第几行，绝不悄悄改掉；
             能确定的地方才补全（比如判断题的选项），并且一定在右侧预览里告诉你。
+            <br />
+            如果题目是 AI 整理的，右上角「复制 AI 提示词」能让它按这个格式输出，比事后修格式省事。
           </p>
         </div>
       </details>

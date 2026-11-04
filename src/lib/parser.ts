@@ -26,6 +26,134 @@ function matchOption(raw: string, allowLoose: boolean): { key: string; text: str
 const JUDGE_WORDS = /^(对|错|正确|错误|是|否|√|×|✓|✗|t|f|true|false)$/i
 const LETTER_TOKEN = /^[A-Za-z]{1,6}$/
 
+/** 「答案速查表」「附录」这类标题后面整段都不算题目 */
+const NOISE_HEADING_RE =
+  /^(?:参考)?答案(?:速查|汇总|表)?$|答案速查|解析汇总|附录|目录|前言|后记|版权/
+
+/** 全角字母/数字、全角空格、不换行空格统一成半角，避免 `Ａ．` 这类写法认不出 */
+function normalizeWidths(line: string): string {
+  return line
+    .replace(/[\u3000\u00a0]/g, ' ')
+    // 只把全角字母/数字转半角；全角标点（（）：？等）必须保持原样
+    .replace(/[\uFF10-\uFF19\uFF21-\uFF3A\uFF41-\uFF5A]/g, (ch) =>
+      String.fromCharCode(ch.charCodeAt(0) - 0xfee0),
+    )
+}
+
+/** 整篇被 ```markdown 包住时，把外层围栏拆掉再解析（AI 输出常见） */
+function stripOuterFence(content: string): { text: string; stripped: boolean } {
+  const lines = content.split('\n')
+  let first = 0
+  while (first < lines.length && !lines[first].trim()) first++
+  let last = lines.length - 1
+  while (last > first && !lines[last].trim()) last--
+  if (first >= last) return { text: content, stripped: false }
+
+  const open = /^\s*(`{3}|~{3})\s*[A-Za-z]*\s*$/.exec(lines[first])
+  if (!open) return { text: content, stripped: false }
+  const close = /^\s*(`{3}|~{3})\s*$/.exec(lines[last])
+  if (!close || close[1] !== open[1]) return { text: content, stripped: false }
+
+  const inner = lines.slice(first + 1, last)
+  // 里面必须真的像题目，否则可能只是把一段代码包起来了
+  const looksLikeQuestions = inner.some((l) => HEADING_RE.test(l) || NUMBERED_RE.test(l))
+  if (!looksLikeQuestions) return { text: content, stripped: false }
+  return { text: inner.join('\n'), stripped: true }
+}
+
+/** 一行塞了多个选项：`A. 甲  B. 乙  C. 丙`（Word/AI 输出常见） */
+const INLINE_OPT_RE = /(?<=^|[\s\u4e00-\u9fa5])([A-H])\s*[.．、)）:：]\s*/g
+
+function splitInlineOptions(raw: string): { key: string; text: string }[] | null {
+  const line = raw.replace(/^\s*[-*+]\s+/, '')
+  const matches: { key: string; start: number; end: number }[] = []
+  const re = new RegExp(INLINE_OPT_RE.source, 'g')
+  let m: RegExpExecArray | null
+  while ((m = re.exec(line))) {
+    matches.push({ key: m[1], start: m.index, end: re.lastIndex })
+  }
+  if (matches.length < 2) return null
+
+  // 必须是从某个字母开始的连续字母序列，排除普通句子里碰巧出现的「A.」
+  const first = matches[0].key.charCodeAt(0)
+  for (let i = 0; i < matches.length; i++) {
+    if (matches[i].key.charCodeAt(0) !== first + i) return null
+  }
+
+  const options: { key: string; text: string }[] = []
+  for (let i = 0; i < matches.length; i++) {
+    const end = i + 1 < matches.length ? matches[i + 1].start : line.length
+    const text = line.slice(matches[i].end, end).trim()
+    if (!text) return null
+    options.push({ key: matches[i].key, text })
+  }
+  return options
+}
+
+function isPositiveJudge(token: string): boolean {
+  return /^(对|正确|是|√|✓|t|true|y|yes)$/i.test(token)
+}
+
+/** 判断题答案按「正/负」语义落到选项上，而不是死认 A=对 */
+function judgeKeyFor(options: Option[], token: string): string | undefined {
+  const positive = isPositiveJudge(token)
+  const hit = options.find((o) => isPositiveJudge(o.text) === positive)
+  return hit?.key
+}
+
+/** 答案写成选项原文时回填成字母（只在唯一匹配时认，宁可报错也不乱猜） */
+function matchAnswerByText(options: Option[], token: string): string | undefined {
+  const norm = (v: string) => v.replace(/[\s，。,.;；、'"“”‘’()（）]/g, '').trim()
+  const target = norm(token)
+  if (!target) return undefined
+  const exact = options.filter((o) => norm(o.text) === target)
+  if (exact.length === 1) return exact[0].key
+  const loose = options.filter((o) => norm(o.text).includes(target) || target.includes(norm(o.text)))
+  return loose.length === 1 ? loose[0].key : undefined
+}
+
+/** 题目整体被包在一个 ``` 里（AI 常见）：拆出里面的内容，顺便把外面的 H1 当标题 */
+function unwrapQuestionFence(text: string): { text: string; stripped: boolean; title?: string } {
+  const lines = text.split('\n')
+  const regions: { start: number; end: number }[] = []
+  let open = -1
+  for (let i = 0; i < lines.length; i++) {
+    if (!FENCE_RE.test(lines[i])) continue
+    if (open === -1) open = i
+    else {
+      regions.push({ start: open + 1, end: i })
+      open = -1
+    }
+  }
+  if (!regions.length) return { text, stripped: false }
+
+  // 只认「## 及其以下」的标题或编号题；`# 总标题` 和「## 答案速查表」这类不算题目
+  const looksLikeQuestions = (ls: string[]) =>
+    ls.some((l) => {
+      const h = HEADING_RE.exec(l)
+      if (h) {
+        if (NOISE_HEADING_RE.test(h[2].trim())) return false
+        return h[1].length >= 2
+      }
+      return NUMBERED_RE.test(l)
+    })
+
+  const outside = lines.filter((_, i) => !regions.some((r) => i > r.start - 1 && i < r.end + 1))
+  if (looksLikeQuestions(outside)) return { text, stripped: false }
+
+  const candidate = regions.filter((r) => looksLikeQuestions(lines.slice(r.start, r.end)))
+  if (candidate.length !== 1) return { text, stripped: false }
+
+  const inner = lines.slice(candidate[0].start, candidate[0].end).join('\n')
+  const h1 = lines.find((l) => /^#\s+\S/.test(l))
+  return { text: inner, stripped: true, title: h1?.replace(/^#\s+/, '').trim() }
+}
+
+function joinLine(a: string, b: string): string {
+  const cjk = /[\u4e00-\u9fa5，。；：、（）]/
+  return cjk.test(a.slice(-1)) && cjk.test(b.slice(0, 1)) ? `${a}${b}` : `${a} ${b}`
+}
+
 interface Draft {
   line: number
   stem: string[]
@@ -196,6 +324,7 @@ function findStarts(lines: string[], from: number): { line: number; text: string
   const numberedStarts: { line: number; text: string }[] = []
   const numberedInSection: { line: number; text: string }[] = []
   let section = false
+  let noise = false
   let fence = false
 
   for (let i = from; i < lines.length; i++) {
@@ -205,9 +334,16 @@ function findStarts(lines: string[], from: number): { line: number; text: string
       continue
     }
     if (fence) continue
+    if (noise) continue
 
     const h = HEADING_RE.exec(raw)
     if (h) {
+      // 「## 答案速查表」这类标题之后的内容都不是题目
+      if (NOISE_HEADING_RE.test(h[2].trim())) {
+        noise = true
+        section = false
+        continue
+      }
       if (looksLikeSectionTitle(lines, i)) {
         section = true
         continue
@@ -241,15 +377,51 @@ function findStarts(lines: string[], from: number): { line: number; text: string
 }
 
 export function parseMarkdown(content: string, fallbackTitle = '未命名知识库'): ParseResult {
-  const lines = content.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n').split('\n')
   const issues: ParseIssue[] = []
   const questions: ParsedQuestion[] = []
+
+  const normalized = content.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n')
+  const fenced = stripOuterFence(normalized)
+  const unwrapped = fenced.stripped
+    ? { text: fenced.text, stripped: false, title: undefined as string | undefined }
+    : unwrapQuestionFence(fenced.text)
+  if (unwrapped.stripped) {
+    issues.push({
+      line: 1,
+      message: '题目被包在代码块（```）里，已自动拆开再解析',
+      level: 'warn',
+    })
+  } else if (fenced.stripped) {
+    issues.push({ line: 1, message: '整篇被代码块包住了，已自动拆开再解析', level: 'warn' })
+  }
+  const lines = unwrapped.text.split('\n').map(normalizeWidths)
   const front = parseFrontMatter(lines)
+  const docTitle = front.title?.trim() || unwrapped.title || fallbackTitle
 
   const starts = findStarts(lines, front.bodyStart)
+
+  // 第一题之前的内容（「以下是整理后的题目：」这类开场白）直接丢掉，但告诉用户
+  if (starts.length > 0 && starts[0].line > front.bodyStart) {
+    const ignored = lines
+      .slice(front.bodyStart, starts[0].line)
+      .filter((l, offset) => {
+        if (!l.trim() || FENCE_RE.test(l)) return false
+        // 分节标题（`## 一、单项选择题`）和「答案速查表」本来就不是题，不算「被忽略的内容」
+        const idx = front.bodyStart + offset
+        if (HEADING_RE.test(l)) return !looksLikeSectionTitle(lines, idx)
+        return true
+      })
+    if (ignored.length > 0) {
+      issues.push({
+        line: front.bodyStart + 1,
+        message: `开头 ${ignored.length} 行不是题目，已忽略（第一题从第 ${starts[0].line + 1} 行开始）`,
+        level: 'warn',
+      })
+    }
+  }
   if (starts.length === 0) {
     return {
-      title: front.title?.trim() || fallbackTitle,
+      title: docTitle,
       tags: front.tags,
       questions,
       issues: [{ line: 1, message: '文件是空的，没有可导入的题目', level: 'error' }],
@@ -273,6 +445,7 @@ export function parseMarkdown(content: string, fallbackTitle = '未命名知识�
     }
     let fence = false
     let sawOptions = false
+    let lastBlank = true
 
     for (let k = 0; k < seg.body.length; k++) {
       const raw = seg.body[k]
@@ -292,7 +465,10 @@ export function parseMarkdown(content: string, fallbackTitle = '未命名知识�
         continue
       }
 
-      if (!raw.trim()) continue
+      if (!raw.trim()) {
+        lastBlank = true
+        continue
+      }
 
       // 分隔线：只当空行处理（front matter 已单独处理）
       if (HR_RE.test(raw)) continue
@@ -311,11 +487,33 @@ export function parseMarkdown(content: string, fallbackTitle = '未命名知识�
         continue
       }
 
+      // 一行塞了多个选项：`A. 甲  B. 乙  C. 丙`
+      const inline = splitInlineOptions(raw)
+      if (inline && inline.length >= 2) {
+        draft.options.push(...inline)
+        sawOptions = true
+        lastBlank = false
+        continue
+      }
+
       const opt = matchOption(raw, draft.options.length > 0)
       if (opt) {
         draft.options.push(opt)
         sawOptions = true
+        lastBlank = false
         continue
+      }
+
+      // 折行：上一行是选项、中间没空行、这一行明显是它的续行，就接上去
+      if (sawOptions && !lastBlank && draft.options.length > 0) {
+        const prev = draft.options[draft.options.length - 1]
+        const tail = prev.text.slice(-1)
+        const continuesPunct = /[，,、（(：:]/.test(tail)
+        const looksFragment = raw.trim().length <= 24 && !/[。．.！？!?；;]$/.test(raw.trim())
+        if (continuesPunct || looksFragment) {
+          prev.text = joinLine(prev.text, raw.trim())
+          continue
+        }
       }
 
       // 其余内容：选项前算题干，选项后算解析
@@ -331,7 +529,7 @@ export function parseMarkdown(content: string, fallbackTitle = '未命名知识�
   }
 
   return {
-    title: front.title?.trim() || fallbackTitle,
+    title: docTitle,
     tags: front.tags,
     questions,
     issues,
@@ -369,7 +567,17 @@ function finalizeDraft(draft: Draft, issues: ParseIssue[]): ParsedQuestion[] {
   }
 
   let options = draft.options
-  const answerRaw = draft.answerRaw.trim()
+  let answerRaw = draft.answerRaw.trim()
+
+  // A1：答案直接写在题干末尾 —— `下列说法正确的是（B）` / `（AB）`
+  if (!answerRaw) {
+    const tail = /(?:[（(]\s*([A-Ha-h]{1,4})\s*[)）])[\s　]*$/.exec(cleanStem)
+    if (tail) {
+      const candidate = tail[1].toUpperCase()
+      answerRaw = candidate
+      cleanStem = cleanStem.slice(0, tail.index).trim()
+    }
+  }
 
   // 判断题允许不写选项：答案是对/错时自动补 A.正确 / B.错误
   if (!options.length) {
@@ -400,11 +608,18 @@ function finalizeDraft(draft: Draft, issues: ParseIssue[]): ParsedQuestion[] {
   const answer: string[] = []
   for (const token of tokens) {
     if (isJudgeWord(token) && judge) {
-      answer.push(/^(对|正确|是|√|✓|t|true)$/i.test(token) ? 'A' : 'B')
+      // A2：按正/负语义落到选项上，不假设 A 就是「对」
+      answer.push(judgeKeyFor(options, token) ?? (isPositiveJudge(token) ? 'A' : 'B'))
       continue
     }
     if (keys.has(token)) {
       answer.push(token)
+      continue
+    }
+    // A5：答案写的是选项原文（「答案：风险分析」）→ 唯一匹配时回填字母
+    const byText = matchAnswerByText(options, token)
+    if (byText) {
+      answer.push(byText)
       continue
     }
     // AB 连写但选项表里没有 B？先提示，再按单字母处理

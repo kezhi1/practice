@@ -344,3 +344,181 @@ B. 乙
     expect(r.questions[0].stem).toBe('题干在标题里')
   })
 })
+
+describe('解析：AI / Word 常见写法（批次 1）', () => {
+  it('答案写在题干末尾的括号里（B）/（AB）', () => {
+    const md = `## 1. 下列说法正确的是（B）
+- A. 甲
+- B. 乙
+- C. 丙
+
+## 2. 下列哪些是水果（AB）
+- A. 苹果
+- B. 香蕉
+- C. 白菜`
+    const r = ok(md)
+    expect(r.questions).toHaveLength(2)
+    expect(r.questions[0].stem).toBe('下列说法正确的是')
+    expect(r.questions[0].answer).toEqual(['B'])
+    expect(r.questions[0].type).toBe('single')
+    expect(r.questions[1].stem).toBe('下列哪些是水果')
+    expect(r.questions[1].answer).toEqual(['A', 'B'])
+    expect(r.questions[1].type).toBe('multiple')
+  })
+
+  it('题干里的空括号（）要保留，不能被当成答案', () => {
+    const md = `## 1. 下列说法正确的是（）
+- A. 甲
+- B. 乙
+> 答案：A`
+    const r = ok(md)
+    expect(r.questions[0].stem).toBe('下列说法正确的是（）')
+  })
+
+  it('判断题符号 √ × 对 错 T F 按语义落键', () => {
+    const md = `## 1. 地球是圆的
+- A. 正确
+- B. 错误
+> 答案：√
+
+## 2. 太阳从西边升起
+- A. 正确
+- B. 错误
+> 答案：×
+
+## 3. 水是液体
+- A. 正确
+- B. 错误
+> 答案：T`
+    const r = ok(md)
+    expect(r.questions.map((q) => q.answer)).toEqual([['A'], ['B'], ['A']])
+  })
+
+  it('判断题选项顺序反过来时，答案跟着语义走而不是死认 A', () => {
+    const md = `## 1. 地球是圆的
+- A. 错误
+- B. 正确
+> 答案：对`
+    const r = ok(md)
+    expect(r.questions[0].answer).toEqual(['B'])
+  })
+
+  it('一行塞多个选项能拆开', () => {
+    const md = `## 1. 下列属于传输层协议的是
+A. TCP B. UDP C. HTTP D. ICMP
+> 答案：AB`
+    const r = ok(md)
+    expect(r.questions).toHaveLength(1)
+    expect(r.questions[0].options.map((o) => `${o.key}${o.text}`)).toEqual([
+      'ATCP',
+      'BUDP',
+      'CHTTP',
+      'DICMP',
+    ])
+    expect(r.questions[0].answer).toEqual(['A', 'B'])
+  })
+
+  it('全角字母/数字归一，全角标点保持原样', () => {
+    const md = `## １．下列说法正确的是（）
+- Ａ．甲
+- Ｂ．乙
+> 答案：Ａ`
+    const r = ok(md)
+    expect(r.questions).toHaveLength(1)
+    expect(r.questions[0].stem).toBe('下列说法正确的是（）')
+    expect(r.questions[0].options.map((o) => o.key)).toEqual(['A', 'B'])
+    expect(r.questions[0].answer).toEqual(['A'])
+  })
+
+  it('答案写成选项原文时回填字母', () => {
+    const md = `## 1. 安全责任分配的基本原则是
+- A. 三分靠技术，七分靠管理
+- B. 谁主管，谁负责
+- C. 防火墙技术
+> 答案：谁主管，谁负责`
+    const r = ok(md)
+    expect(r.questions[0].answer).toEqual(['B'])
+  })
+
+  it('整篇被 ```markdown 包住时自动拆开', () => {
+    const md = '```markdown\n## 1. 一加一等于几\n- A. 1\n- B. 2\n> 答案：B\n```'
+    const r = ok(md)
+    expect(r.questions).toHaveLength(1)
+    expect(r.questions[0].answer).toEqual(['B'])
+    expect(r.issues.some((i) => /代码块包住/.test(i.message))).toBe(true)
+  })
+
+  it('「答案速查表」之后的内容不再当成题目', () => {
+    const md = `## 1. 一加一等于几
+- A. 1
+- B. 2
+> 答案：B
+
+## 答案速查表
+1. B
+2. A`
+    const r = ok(md)
+    expect(r.questions).toHaveLength(1)
+  })
+
+  it('开头的开场白被忽略并给出提醒', () => {
+    const md = `以下是整理后的 2 道题：
+
+## 1. 一加一等于几
+- A. 1
+- B. 2
+> 答案：B`
+    const r = ok(md)
+    expect(r.questions).toHaveLength(1)
+    expect(r.issues.some((i) => /不是题目，已忽略/.test(i.message))).toBe(true)
+  })
+
+  it('长选项折行会被接回上一行', () => {
+    const md = `## 1. 下列说法正确的是
+- A. 这是一个特别长的选项，写到一半就换行了
+后面这半截应该接回去
+- B. 乙
+> 答案：A`
+    const r = ok(md)
+    expect(r.questions[0].options[0].text).toBe('这是一个特别长的选项，写到一半就换行了后面这半截应该接回去')
+  })
+})
+
+// 回归：文档开头有一个总标题，后面还要能逐题识别（历史上被吞成一道题）
+describe('回归：总标题 + 多题', () => {
+  it('开头一个 # 总标题，下面 ## 分题，全部识别', () => {
+    const md = `# 计算机网络期末复习
+
+## 1. TCP 是面向连接的协议。
+- A. 正确
+- B. 错误
+> 答案：A
+
+## 2. 下列哪些是传输层协议
+- A. TCP
+- B. UDP
+- C. HTTP
+> 答案：AB`
+    const r = ok(md)
+    expect(r.questions).toHaveLength(2)
+    expect(r.questions[0].stem).toBe('TCP 是面向连接的协议。')
+    expect(r.questions[1].answer).toEqual(['A', 'B'])
+  })
+
+  it('开头一个 ## 总标题，下面编号题，全部识别', () => {
+    const md = `## 一、单项选择题
+
+1. 路由器工作在 OSI 模型的哪一层？
+- A. 物理层
+- B. 网络层
+> 答案：B
+
+2. 交换机工作在数据链路层。
+- A. 正确
+- B. 错误
+> 答案：A`
+    const r = ok(md)
+    expect(r.questions).toHaveLength(2)
+    expect(r.questions[0].stem).toBe('路由器工作在 OSI 模型的哪一层？')
+  })
+})

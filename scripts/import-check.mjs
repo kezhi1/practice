@@ -97,8 +97,34 @@ async function importOnce(md, name) {
 
 console.log('--- 宽容写法 ---')
 console.log(await importOnce(sloppy, '11-tolerant-preview'))
+
+// 批次 0：复制 AI 提示词按钮要真的能点、能回显
+await page.waitForSelector('textarea.editor', { timeout: 5000 })
+const copied = await page.evaluate(async () => {
+  const btn = [...document.querySelectorAll('button')].find((b) =>
+    (b.textContent ?? '').includes('复制 AI 提示词'),
+  )
+  if (!btn) return 'missing'
+  btn.click()
+  await new Promise((r) => setTimeout(r, 400))
+  const label = [...document.querySelectorAll('button')]
+    .map((b) => b.textContent ?? '')
+    .find((t) => t.includes('已复制'))
+  return label ? 'copied' : 'no-feedback'
+})
+if (copied !== 'copied') throw new Error(`复制 AI 提示词按钮异常：${copied}`)
+console.log('复制 AI 提示词：', copied)
+
 console.log('--- 无标题编号写法 ---')
 console.log(await importOnce(numbered, '12-numbered-preview'))
+console.log('--- examples/AI 风格题库.md（代码块外壳 + 开场白 + 答案速查表）---')
+const aiFile = readFileSync(new URL('../examples/AI 风格题库.md', import.meta.url), 'utf8')
+const aiText = await importOnce(aiFile, '14-ai-style')
+console.log(aiText)
+if (!aiText.includes('3 题可导入')) throw new Error('AI 风格样例应解析出 3 题')
+if (aiText.includes('个错误')) throw new Error('AI 风格样例不应有错误')
+if (aiText.includes('答案速查表')) throw new Error('答案速查表被当成题干了')
+
 console.log('--- 严格模式下的歧义写法 ---')
 console.log(await importOnce(strictBad, '13-strict-error'))
 
