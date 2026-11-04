@@ -94,6 +94,12 @@ try {
   const bankHash = await page.evaluate(() => location.hash)
   console.log('hash after import:', bankHash)
 
+  // 题号只用于分题，不该留在题干里
+  const stems = await page.$$eval('.stem', (els) => els.map((e) => e.textContent.trim()))
+  const leaked = stems.filter((t) => /^\d+\s*[.．、)）]/.test(t))
+  console.log('stems sample:', stems.slice(0, 3))
+  if (leaked.length) fail(`题干里残留了题号：${JSON.stringify(leaked)}`)
+
   // ---------- 4. 深链接 + 刷新 ----------
   await page.evaluate(() => {
     location.hash = '#/history'

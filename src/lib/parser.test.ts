@@ -315,6 +315,23 @@ B. 乙
     expect(r.questions[0].stem).toBe('第一题')
   })
 
+  it('标题里的两位数题号也剥掉，题干从第一个字开始', () => {
+    const md = `## 20. 路由器工作在 OSI 模型的哪一层？
+- A. 物理层
+- B. 网络层
+> 答案：B
+
+## 21、（3）带全角顿号的编号
+- A. 甲
+- B. 乙
+> 答案：A`
+    const r = ok(md)
+    expect(r.questions).toHaveLength(2)
+    expect(r.questions[0].stem).toBe('路由器工作在 OSI 模型的哪一层？')
+    expect(r.questions[0].stem.startsWith('20')).toBe(false)
+    expect(r.questions[1].stem).toBe('（3）带全角顿号的编号')
+  })
+
   it('标题就是题干时照旧（标题后直接跟选项）', () => {
     const md = `## 1. 题干在标题里
 
