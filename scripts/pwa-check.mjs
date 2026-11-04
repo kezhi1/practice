@@ -42,6 +42,12 @@ try {
     return { names, count: keys.length, sample: keys.slice(0, 4).map((k) => new URL(k.url).pathname) }
   })
 
+  // 缓存名应带构建 hash（新版本清旧缓存的完整路径由 sw-update-check.mjs 验证）
+  const cacheName = cacheKeys.names[0] ?? ''
+  if (!/^practice-[0-9a-f]{8}$/.test(cacheName)) {
+    throw new Error(`缓存名不是 practice-<buildId>：${cacheKeys.names.join(',')}`)
+  }
+
   // 清掉浏览器 HTTP 缓存，确保离线时只有 Service Worker 的缓存可用
   const client = await page.createCDPSession()
   await client.send('Network.clearBrowserCache')

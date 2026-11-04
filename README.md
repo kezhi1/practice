@@ -178,6 +178,9 @@ tags: [网络, 面试]
 `npm run build` 后产物带 `manifest.webmanifest` 和 Service Worker：用 `npm run preview`（或任何静态托管）打开，浏览器地址栏会出现「安装」，装完就是一个独立窗口的 App，断网也能打开（题库本来就在本地 IndexedDB 里）。
 
 - Service Worker 只在正式构建里注册，`npm run dev` 下不注册，免得改代码被缓存挡住；改了代码看不到效果时，打包预览再看。
+- **更新是自动的**：每次打开都会检查 `sw.js`，有变化就在后台装好并接管。正开着的窗口不会突然刷新（怕打断做题），而是在底部浮出「有新版本了，刷新后生效」，点了才刷新，点 × 可以先做完这一套。
+- **缓存名带构建 hash**（`practice-xxxxxxxx`）：新版本激活时把旧的整个缓存删掉，不会越用越大；离线时用的始终是最近一次成功缓存的版本。
+- 数据不受更新影响：换的是程序，`IndexedDB` 里的题库 / 错题本 / 练习历史不动。
 - 部署到子路径（比如 GitHub Pages 的 `/practice/`）没问题：`base: './'` 和 manifest 里都用相对路径，Service Worker 的作用域跟着页面走。
 
 ## 刷题时的键盘操作
@@ -216,6 +219,7 @@ examples/
 scripts/e2e.mjs        Puppeteer 端到端检查
 scripts/features-check.mjs  练习模式 / 断点续答 / 收藏 / 复习自检
 scripts/pwa-check.mjs       manifest / Service Worker / 离线自检
+scripts/sw-update-check.mjs 新版本替换旧缓存、提示条自检
 scripts/subpath-check.mjs   子路径部署（GitHub Pages）自检
 public/                manifest、sw.js、图标
 docs/outline.md        产品大纲

@@ -1163,3 +1163,49 @@ kbd {
   font-weight: 600;
   padding: 6px 9px;
 }
+
+/* ---------- PWA：新版本提示条 ---------- */
+.update-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px 8px 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.16);
+  font-size: 13.5px;
+  animation: update-in 0.22s ease both;
+}
+.update-text {
+  color: var(--fg);
+  white-space: nowrap;
+}
+.update-close {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  padding: 4px 6px;
+  cursor: pointer;
+  border-radius: 999px;
+}
+.update-close:hover {
+  background: rgba(127, 127, 127, 0.16);
+}
+@keyframes update-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}

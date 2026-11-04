@@ -1,5 +1,6 @@
 /* 极简离线缓存：壳页面走网络优先，静态资源走缓存优先（Vite 产物文件名带 hash，不会串版本） */
-const CACHE = 'practice-v2'
+// 构建时由 vite 插件替换成带构建 hash 的名字，例如 practice-1a2b3c4d
+const CACHE = /* __CACHE__ */ 'practice-dev'
 // 构建时由 vite 插件填入带 hash 的 JS/CSS 清单
 const ASSETS = /* __ASSETS__ */ []
 
@@ -14,10 +15,17 @@ const PRECACHE = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches
-      .open(CACHE)
-      .then((cache) => cache.addAll(PRECACHE))
-      .then(() => self.skipWaiting()),
+    caches.open(CACHE).then(async (cache) => {
+      // 逐个缓存：单个资源 404 不该让整个 Service Worker 装不上
+      await Promise.all(
+        PRECACHE.map((url) =>
+          cache.add(url).catch(() => {
+            /* 忽略单个失败，运行时再补 */
+          }),
+        ),
+      )
+      await self.skipWaiting()
+    }),
   )
 })
 
