@@ -132,7 +132,7 @@ export default function App() {
             知识库
           </button>
           <button className="btn primary" onClick={() => go({ name: 'import' })}>
-            + 导入<span className="wide-only"> Markdown</span>
+            + 导入<span className="wide-only">文件</span>
           </button>
         </div>
       </header>

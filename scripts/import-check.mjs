@@ -70,7 +70,7 @@ async function importOnce(md, name) {
   const buttons = await page.$$('button')
   for (const h of buttons) {
     const t = await page.evaluate((el) => el.textContent ?? '', h)
-    if (t.includes('导入 Markdown') || t.includes('导入第一个')) {
+    if (t.includes('导入文件') || t.includes('导入第一份')) {
       await h.click()
       break
     }

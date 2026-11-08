@@ -84,7 +84,7 @@ try {
   await shot(page, '01-empty')
 
   // 2. 导入页
-  await clickText(page, '+ 导入 Markdown')
+  await clickText(page, '+ 导入文件')
   await page.waitForSelector('textarea.editor', { timeout: 5000 })
   const md = buildMarkdown(60)
   await page.evaluate((value) => {

@@ -18,6 +18,7 @@ export default function ImportView({ onDone, onCancel }: Props) {
   const [targetId, setTargetId] = useState('')
   const [busy, setBusy] = useState(false)
   const [dragging, setDragging] = useState(false)
+  const [fileError, setFileError] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -34,6 +35,14 @@ export default function ImportView({ onDone, onCancel }: Props) {
   const warns = parsed?.issues.filter((i) => i.level === 'warn') ?? []
 
   async function readFile(file: File) {
+    // 拖拽不走 accept 过滤：非 .md 直接说清楚，别让它读进来变成一堆解析错误
+    if (!/\.(md|markdown)$/i.test(file.name)) {
+      setFileError(
+        `「${file.name}」不是 .md 文件。Word、PDF 请先让 AI 整理成 .md，或者把题目文字直接粘贴到下面的输入框。`,
+      )
+      return
+    }
+    setFileError('')
     const content = await file.text()
     setText(content)
     setFileName(file.name)
@@ -133,9 +142,12 @@ export default function ImportView({ onDone, onCancel }: Props) {
     <section>
       <div className="page-head">
         <div>
-          <h1>导入 Markdown</h1>
+          <div className="page-title">
+            <h1>导入文件</h1>
+            <span className="format-badge">只支持 .md 文件</span>
+          </div>
           <p className="muted">
-            拖入 .md 文件，或直接粘贴内容。解析结果可先预览，确认无误再入库。
+            Word、PDF、图片请先整理成 .md；也可以直接粘贴题目文字，先预览再入库。
           </p>
         </div>
         <div className="head-actions">
@@ -151,10 +163,20 @@ export default function ImportView({ onDone, onCancel }: Props) {
         </div>
       </div>
 
+      {/* 没有现成题目文件的人，最需要的是「接下来该做什么」而不是格式说明 */}
+      <p className="import-hint">
+        <span className="import-hint-icon">i</span>
+        <span>
+          题目在 Word、PDF 或网页里？点
+          <code className="import-hint-key">复制 AI 提示词</code>
+          发给 AI，让它按格式整理，再把结果粘到左边。
+        </span>
+      </p>
+
       <details className="tips">
         <summary>
           <span className="tips-icon">?</span>
-          写法小抄：一份 Markdown 大概长什么样（点开）
+          写法小抄：题目在文件里大概长什么样（点开）
         </summary>
         <div className="tips-body">
           <table className="tips-table">
@@ -228,8 +250,8 @@ export default function ImportView({ onDone, onCancel }: Props) {
             onDrop={onDrop}
             onClick={() => fileRef.current?.click()}
           >
-            <strong>拖拽 Markdown 到这里</strong>
-            <span className="muted">或点击选择文件</span>
+            <strong>把 .md 文件拖到这里</strong>
+            <span className="muted">或点击选择文件（仅 .md）</span>
             <input
               ref={fileRef}
               type="file"
@@ -238,20 +260,27 @@ export default function ImportView({ onDone, onCancel }: Props) {
               onChange={(e) => {
                 const f = e.target.files?.[0]
                 if (f) void readFile(f)
+                e.target.value = ''
               }}
             />
           </div>
+          {fileError && (
+            <p className="file-error" role="alert">
+              {fileError}
+            </p>
+          )}
           <div className="row between mt">
             <span className="muted small">{fileName || '未选择文件'}</span>
             <span className="muted small">{text.length} 字符</span>
           </div>
           <textarea
             className="editor mt"
-            placeholder="也可以直接粘贴 Markdown…"
+            placeholder="也可以直接粘贴题目文字…"
             value={text}
             onChange={(e) => {
               setText(e.target.value)
               setFileName('')
+              setFileError('')
             }}
             spellCheck={false}
           />

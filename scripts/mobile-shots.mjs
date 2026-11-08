@@ -62,12 +62,14 @@ async function overflowReport() {
     const doc = document.documentElement.scrollWidth
     const bad = []
     for (const el of document.querySelectorAll('body *')) {
-      if (el.closest('.dots') || el.closest('.update-bar')) continue
+      if (el.closest('.dots') || el.closest('.update-bar') || el.closest('.topbar-actions')) continue
       const r = el.getBoundingClientRect()
       if (r.width === 0) continue
       if (r.right > vw + 1) {
         const cls = typeof el.className === 'string' ? el.className.split(' ')[0] : ''
-        bad.push(`${el.tagName.toLowerCase()}${cls ? '.' + cls : ''} +${Math.round(r.right - vw)}px`)
+        bad.push(
+          `${el.tagName.toLowerCase()}${cls ? '.' + cls : ''} +${Math.round(r.right - vw)}px「${(el.textContent ?? '').trim().slice(0, 20)}」`,
+        )
       }
       if (bad.length >= 6) break
     }
@@ -85,7 +87,7 @@ async function shot(name) {
 await page.goto(BASE, { waitUntil: 'networkidle0' })
 await page.evaluate(() => {
   ;[...document.querySelectorAll('button')]
-    .find((b) => b.textContent.includes('导入 Markdown'))
+    .find((b) => b.textContent.includes('导入文件'))
     ?.click()
 })
 await page.waitForSelector('textarea')

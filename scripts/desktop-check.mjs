@@ -30,7 +30,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 await page.goto(BASE, { waitUntil: 'networkidle0' })
 await page.evaluate(() => {
-  ;[...document.querySelectorAll('button')].find((b) => b.textContent.includes('导入 Markdown'))?.click()
+  ;[...document.querySelectorAll('button')].find((b) => b.textContent.includes('导入文件'))?.click()
 })
 await page.waitForSelector('textarea')
 await page.evaluate((md) => {

@@ -96,7 +96,7 @@ export default function Banks({ onOpen, onQuiz, onImport }: Props) {
       <div className="page-head">
         <div>
           <h1>知识库</h1>
-          <p className="muted">导入 Markdown 建立题库，每次练习抽 50 题。</p>
+          <p className="muted">导入题目文件建立题库，每次练习抽 50 题。</p>
         </div>
         {rows.length > 0 && (
           <div className="row gap">
@@ -120,9 +120,9 @@ export default function Banks({ onOpen, onQuiz, onImport }: Props) {
         <div className="empty-state">
           <div className="empty-icon">📥</div>
           <h2>还没有题库</h2>
-          <p className="muted">一个 Markdown 文件就是一个知识库，`##` 开头即一道题。</p>
+          <p className="muted">一个 .md 文件就是一个知识库，「##」开头即一道题。</p>
           <button className="btn primary lg" onClick={onImport}>
-            导入第一个 Markdown
+            导入第一份题目文件
           </button>
         </div>
       ) : (

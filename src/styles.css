@@ -146,6 +146,8 @@ p + p {
   gap: 8px;
   flex-wrap: wrap;
   align-items: center;
+  /* 换行时仍靠右，别掉到标题下方左对齐 */
+  margin-left: auto;
 }
 .head-actions .btn {
   white-space: nowrap;
@@ -911,6 +913,72 @@ select:focus,
 .toolbar select {
   width: auto;
   min-width: 160px;
+}
+
+/* ---------- 导入页操作提示 ---------- */
+.page-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+/* 只支持 .md 是硬约束，别让人拖完 PDF 才发现 */
+.format-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--amber-soft);
+  color: var(--amber);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.file-error {
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--red-soft);
+  color: var(--red);
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+.import-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 0 0 14px;
+  padding: 11px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--primary-soft);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.import-hint-icon {
+  flex: none;
+  margin-top: 2px;
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+}
+.import-hint-key {
+  margin: 0 2px;
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--primary);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 /* ---------- 导入页写法小抄 ---------- */
