@@ -18,9 +18,11 @@ const EASE = 'cubic-bezier(0.22, 0.61, 0.36, 1)'
 const DRAG_START = 8
 /** 屏幕左右边缘留给系统返回手势，不接管 */
 const EDGE = 24
-const EXIT_MS = 120
-const ENTER_MS = 170
+const EXIT_MS = 100
+const ENTER_MS = 150
 const SNAP_MS = 160
+/** 换题那一瞬间的透明度：淡到 0 会有几帧白屏，留一层很浅的底更顺 */
+const SWAP_OPACITY = 0.14
 
 /**
  * 手机端左右滑动翻题。
@@ -103,18 +105,25 @@ export function useSwipePaging<T extends HTMLElement>(opts: SwipePagingOptions) 
       }, SNAP_MS + 20)
     }
 
-    /** 滑出 → 换题 → 从另一侧滑入 */
+    /**
+     * 淡出 → 换题 → 淡入。
+     *
+     * 不做整屏位移：之前是旧题滑出屏幕、动画结束才换内容，
+     * 中间有一帧空白，旧题走了新题才「啪」地出现，看着像新题从侧面跳出来。
+     * 这里让卡片就地回正并淡到很浅，换完题再淡回来，
+     * 全程没有横向位移，也就没有“两段动画”的断裂感。
+     */
     function page(dir: -1 | 1) {
       animatingRef.current = true
       const reduce = reduceMotion()
-      const out = dir * width() * 1.12
       const exit = reduce ? 0 : EXIT_MS
 
       el.classList.remove('is-swiping')
       if (!reduce) {
+        // 只淡到很浅，不淡到全透明：真的到 0 会有几帧整张卡片空白，看着像闪了一下
         el.style.transition = `transform ${EXIT_MS}ms ${EASE}, opacity ${EXIT_MS}ms ${EASE}`
-        el.style.transform = `translate3d(${out}px, 0, 0)`
-        el.style.opacity = '0'
+        el.style.transform = 'translate3d(0, 0, 0)'
+        el.style.opacity = String(SWAP_OPACITY)
       }
 
       later(() => {
@@ -128,14 +137,13 @@ export function useSwipePaging<T extends HTMLElement>(opts: SwipePagingOptions) 
           return
         }
 
-        // 新题从另一侧就位，再滑进来
+        // 此时卡片很浅：把新题摆在原位，直接从这层浅色淡回来
         el.style.transition = 'none'
-        el.style.transform = `translate3d(${-out}px, 0, 0)`
-        el.style.opacity = '0'
+        el.style.transform = 'translate3d(0, 0, 0)'
+        el.style.opacity = String(SWAP_OPACITY)
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
-            el.style.transition = `transform ${ENTER_MS}ms ${EASE}, opacity ${ENTER_MS}ms ${EASE}`
-            el.style.transform = 'translate3d(0, 0, 0)'
+            el.style.transition = `opacity ${ENTER_MS}ms ${EASE}`
             el.style.opacity = '1'
             later(() => {
               animatingRef.current = false
