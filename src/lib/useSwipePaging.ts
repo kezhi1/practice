@@ -18,9 +18,9 @@ const EASE = 'cubic-bezier(0.22, 0.61, 0.36, 1)'
 const DRAG_START = 8
 /** 屏幕左右边缘留给系统返回手势，不接管 */
 const EDGE = 24
-const EXIT_MS = 100
-const ENTER_MS = 150
-const SNAP_MS = 160
+const EXIT_MS = 60
+const ENTER_MS = 90
+const SNAP_MS = 140
 /** 换题那一瞬间的透明度：淡到 0 会有几帧白屏，留一层很浅的底更顺 */
 const SWAP_OPACITY = 0.14
 
@@ -137,20 +137,18 @@ export function useSwipePaging<T extends HTMLElement>(opts: SwipePagingOptions) 
           return
         }
 
-        // 此时卡片很浅：把新题摆在原位，直接从这层浅色淡回来
+        // 此时卡片很浅：把新题摆在原位，直接从这层浅色淡回来。
+        // 用一次强制回流代替两帧 rAF，省掉约 32ms 的空等。
         el.style.transition = 'none'
         el.style.transform = 'translate3d(0, 0, 0)'
         el.style.opacity = String(SWAP_OPACITY)
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            el.style.transition = `opacity ${ENTER_MS}ms ${EASE}`
-            el.style.opacity = '1'
-            later(() => {
-              animatingRef.current = false
-              clearStyles()
-            }, ENTER_MS + 20)
-          })
-        })
+        void el.offsetHeight
+        el.style.transition = `opacity ${ENTER_MS}ms ${EASE}`
+        el.style.opacity = '1'
+        later(() => {
+          animatingRef.current = false
+          clearStyles()
+        }, ENTER_MS + 20)
       }, exit)
     }
 
