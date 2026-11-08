@@ -666,6 +666,18 @@ select:focus,
 }
 .question-card {
   padding: 24px 26px;
+  /* 左右滑动翻题时，把滑出卡片的内容裁掉，不产生横向滚动条 */
+  overflow: hidden;
+}
+/* 手机端左右滑动翻题：纵向滚动交给浏览器，横向才轮到 JS 接管 */
+.swipe-stage {
+  touch-action: pan-y;
+}
+.swipe-stage.is-swiping {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  will-change: transform;
 }
 .options {
   display: grid;
@@ -1068,6 +1080,40 @@ kbd {
   background: var(--panel);
   color: var(--muted);
   font-size: 13px;
+}
+
+/* 手机端首次提示：左右滑动切题 */
+.swipe-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin: 0 0 12px;
+  padding: 9px 14px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  animation: swipe-hint-in 0.22s ease both;
+}
+.swipe-hint span {
+  color: var(--primary);
+  font-weight: 700;
+}
+@keyframes swipe-hint-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .swipe-hint {
+    animation: none;
+  }
 }
 
 /* 练习模式：揭晓对错 */

@@ -210,6 +210,8 @@ tags: [网络, 面试]
 
 另外手机上隐藏键盘快捷键提示（没有实体键盘），选项、题号条、按钮都按可点区域排布。
 
+答题页支持左右滑动切题（见下面「手机上的滑动翻题」），第一次进答题页会提示一次。
+
 自检脚本 `scripts/mobile-shots.mjs` 会在 390 / 360 / 768 三个宽度下逐页截图，并检测每个页面有没有横向溢出（`documentElement.scrollWidth > innerWidth` 或元素越过右边界）。
 
 ## 大题库（几百到几千题）
@@ -240,6 +242,21 @@ tags: [网络, 面试]
 
 导出的内容包含题干、全部选项、答案、解析、非默认难度和标签；题库标题和标签写进 front matter。文件名取自题库标题，非法字符替换成 `_`。
 
+## 手机上的滑动翻题
+
+手指在题干/选项区域左右划：左滑下一题，右滑上一题。位移不到约 22% 屏宽就松手会弹回原位，划得快也算翻页。
+
+- 第一题再往右、最后一题再往左只会拉回来一点（阻尼回弹），不会跳题也不会交卷。
+- 屏幕最左、最右各 24px 不接管，留给 iOS 的侧滑返回。
+- 上下为主的手势完全不拦，长题干照样能滚；题号条上左右拖动是滚题号，不会误切题。
+- 只认手指，桌面鼠标拖拽和方向键行为不变；`prefers-reduced-motion` 下不做滑动动画。
+- 练习模式不管有没有点「对答案」都能滑，滑走再滑回来，选中和解析都还在。
+- 滑动结束会拦掉浏览器补发的那一次点击，避免手指抬起时误选到选项；下一次真正的点按不受影响。
+
+实现见 `src/lib/useSwipePaging.ts`（`touch-action: pan-y` + Pointer Events + 轴锁定，逐帧改 `transform` 不触发重渲染）。
+
+> 一个浏览器层面的注意点：页面没关掉双击缩放，滑动手势结束后约半秒内，浏览器会把紧接着的点按当成「双击」而不派发 click。真人滑完还要看题，影响很小；自检脚本里相应等了 650ms 再点。
+
 ## 刷题时的键盘操作
 
 `1`–`4` 或 `A`–`D` 选选项 · `←` `→` 切题 · `Enter` 下一题 · `F` 标记本题。焦点在输入框或按着 Ctrl/⌘ 时不拦截。
@@ -258,6 +275,7 @@ src/
   App.tsx              视图路由（无 react-router，状态驱动）
   db.ts                Dexie 数据层：banks / questions / sessions
   lib/parser.ts        Markdown 解析 + 校验 + 模板
+  lib/useSwipePaging.ts 手机端左右滑动翻题（Pointer Events）
   lib/util.ts          洗牌、集合比较、计时格式化
   lib/markdown.ts      markdown-it 行内渲染
   views/Banks.tsx      知识库列表
@@ -282,6 +300,7 @@ scripts/subpath-check.mjs   子路径部署（GitHub Pages）自检
 scripts/mobile-shots.mjs    390/360/768 三档宽度截图 + 横向溢出检测
 scripts/perf-check.mjs      大题库性能（分批渲染 / 搜索 / 加载更多）自检
 scripts/p2-check.mjs        错题本按知识库练习 + 导出 Markdown 自检
+scripts/swipe-check.mjs     手机端左右滑动翻题自检（CDP 真实触摸）
 public/                manifest、sw.js、图标
 docs/outline.md        产品大纲
 docs/flow.html         流程图（可交互，深浅色切换）

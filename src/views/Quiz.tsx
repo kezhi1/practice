@@ -12,6 +12,7 @@ import {
 import { renderInline } from '../lib/markdown'
 import { FONT_LABEL, loadFontScale, saveFontScale, type FontScale } from '../lib/prefs'
 import { isDue, needsFirstSchedule, nextReview } from '../lib/srs'
+import { useSwipePaging } from '../lib/useSwipePaging'
 import { formatDuration, sameSet } from '../lib/util'
 import {
   TYPE_LABEL,
@@ -35,6 +36,8 @@ interface Props {
 }
 
 const MODE_KEY = 'practice.quizMode'
+/** 首次进入手机答题页时提示一次「左右滑动切题」，之后不再打扰 */
+const SWIPE_HINT_KEY = 'practice.swipeHintShown'
 
 function loadMode(): QuizMode {
   try {
@@ -79,6 +82,8 @@ export default function Quiz({ source, onFinish, onExit }: Props) {
   const [fontScale, setFontScale] = useState<FontScale>(loadFontScale)
   /** 交卷确认弹窗：未作答时先拦一下 */
   const [confirmUnanswered, setConfirmUnanswered] = useState<number | null>(null)
+  /** 手机端首次进入时提示「左右滑动切题」 */
+  const [swipeHint, setSwipeHint] = useState(false)
   const dotsRef = useRef<HTMLDivElement>(null)
   const poolRef = useRef<Question[]>([])
   /** 交卷成功后不该再补写草稿 */
@@ -190,6 +195,36 @@ export default function Quiz({ source, onFinish, onExit }: Props) {
     },
     [],
   )
+
+  // 手机端首次提示：只提示一次，之后不再出现
+  useEffect(() => {
+    if (loading || questions.length < 2) return
+    const touchCapable =
+      navigator.maxTouchPoints > 0 ||
+      'ontouchstart' in window ||
+      (typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches)
+    if (!touchCapable) return
+    try {
+      if (localStorage.getItem(SWIPE_HINT_KEY)) return
+      localStorage.setItem(SWIPE_HINT_KEY, '1')
+    } catch {
+      return
+    }
+    setSwipeHint(true)
+    const t = window.setTimeout(() => setSwipeHint(false), 6000)
+    return () => window.clearTimeout(t)
+  }, [loading, questions.length])
+
+  // 手机端左右滑动翻题：不管练习模式点没点「对答案」，都能滑
+  const swipe = useSwipePaging<HTMLDivElement>({
+    enabled: !loading && questions.length > 1 && !submitting && confirmUnanswered === null,
+    canNext: idx < questions.length - 1,
+    canPrev: idx > 0,
+    resetKey: idx,
+    onNext: () => setIdx((i) => Math.min(i + 1, questions.length - 1)),
+    onPrev: () => setIdx((i) => Math.max(i - 1, 0)),
+    onPaged: () => setSwipeHint(false),
+  })
 
   // 键盘：1-9 / A-D 选选项，← → 切题，Enter 下一题，F 标记
   useEffect(() => {
@@ -426,6 +461,12 @@ export default function Quiz({ source, onFinish, onExit }: Props) {
         <div className="progress-fill" style={{ width: `${progress}%` }} />
       </div>
 
+      {swipeHint && (
+        <button className="swipe-hint" onClick={() => setSwipeHint(false)}>
+          <span>←</span> 左右滑动切换题目 <span>→</span>
+        </button>
+      )}
+
       {restored !== null && (
         <div className="restore-bar">
           <span>已恢复上次进度，从第 {idx + 1} 题继续。</span>
@@ -436,78 +477,84 @@ export default function Quiz({ source, onFinish, onExit }: Props) {
       )}
 
       <article className="card pad question-card">
-        <div className="q-head">
-          <span className={`badge type-${q.type}`}>{TYPE_LABEL[q.type]}</span>
-          <span className="muted small">
-            第 {idx + 1} / {questions.length} 题
-          </span>
-          {q.wrongCount > 0 && <span className="badge warn">错过 {q.wrongCount} 次</span>}
-          <button
-            className={`btn ghost sm push ${q.fav ? 'fav-on' : ''}`}
-            onClick={() => void toggleFav(q)}
-            title="收藏到收藏夹，方便之后集中练"
-          >
-            {q.fav ? '★ 已收藏' : '☆ 收藏'}
-          </button>
-          <button
-            className={`btn ghost sm ${flags.has(q.id) ? 'flagged' : ''}`}
-            onClick={() => toggleFlag(q.id)}
-          >
-            {flags.has(q.id) ? '★ 已标记' : '☆ 标记'}
-          </button>
-        </div>
-
-        <div className="stem" dangerouslySetInnerHTML={{ __html: renderInline(q.stem) }} />
-
-        <div className="options">
-          {q.options.map((o) => {
-            const on = selected.includes(o.key)
-            const cls = [
-              'option',
-              on ? 'selected' : '',
-              isRevealed && q.answer.includes(o.key) ? 'correct' : '',
-              isRevealed && on && !q.answer.includes(o.key) ? 'wrong' : '',
-            ]
-              .filter(Boolean)
-              .join(' ')
-            return (
-              <button key={o.key} className={cls} onClick={() => choose(q, o.key)}>
-                <span className="key">{o.key}</span>
-                <span dangerouslySetInnerHTML={{ __html: renderInline(o.text) }} />
-              </button>
-            )
-          })}
-        </div>
-
-        {mode === 'practice' && q.type === 'multiple' && selected.length > 0 && !isRevealed && (
-          <button
-            className="btn ghost sm"
-            onClick={() => setRevealed((prev) => new Set(prev).add(q.id))}
-          >
-            对答案
-          </button>
-        )}
-
-        {isRevealed && (
-          <div className={`reveal ${gotIt ? 'ok' : 'bad'}`}>
-            <strong>{gotIt ? '答对了' : '答错了'}</strong>
+        {/* 只在手机上接管左右滑动；题号条和底部按钮留在外面，手势互不影响 */}
+        <div className="swipe-stage" ref={swipe.ref}>
+          <div className="q-head">
+            <span className={`badge type-${q.type}`}>{TYPE_LABEL[q.type]}</span>
             <span className="muted small">
-              正确答案 {q.answer.join('')}
-              {q.explanation ? '' : ''}
+              第 {idx + 1} / {questions.length} 题
             </span>
-            {q.explanation && (
-              <div className="explain" dangerouslySetInnerHTML={{ __html: renderInline(q.explanation) }} />
-            )}
+            {q.wrongCount > 0 && <span className="badge warn">错过 {q.wrongCount} 次</span>}
+            <button
+              className={`btn ghost sm push ${q.fav ? 'fav-on' : ''}`}
+              onClick={() => void toggleFav(q)}
+              title="收藏到收藏夹，方便之后集中练"
+            >
+              {q.fav ? '★ 已收藏' : '☆ 收藏'}
+            </button>
+            <button
+              className={`btn ghost sm ${flags.has(q.id) ? 'flagged' : ''}`}
+              onClick={() => toggleFlag(q.id)}
+            >
+              {flags.has(q.id) ? '★ 已标记' : '☆ 标记'}
+            </button>
           </div>
-        )}
 
-        <p className="muted tiny">
-          {q.type === 'multiple' ? '多选题：选全才得分，可多选。' : ''}
-          <span className="kbd-hint">
-            键盘：<kbd>1</kbd>-<kbd>4</kbd> 或 <kbd>A</kbd>-<kbd>D</kbd> 选，<kbd>←</kbd>
-            <kbd>→</kbd> 切题，<kbd>F</kbd> 标记
-          </span>
-        </p>
+          <div className="stem" dangerouslySetInnerHTML={{ __html: renderInline(q.stem) }} />
+
+          <div className="options">
+            {q.options.map((o) => {
+              const on = selected.includes(o.key)
+              const cls = [
+                'option',
+                on ? 'selected' : '',
+                isRevealed && q.answer.includes(o.key) ? 'correct' : '',
+                isRevealed && on && !q.answer.includes(o.key) ? 'wrong' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')
+              return (
+                <button key={o.key} className={cls} onClick={() => choose(q, o.key)}>
+                  <span className="key">{o.key}</span>
+                  <span dangerouslySetInnerHTML={{ __html: renderInline(o.text) }} />
+                </button>
+              )
+            })}
+          </div>
+
+          {mode === 'practice' && q.type === 'multiple' && selected.length > 0 && !isRevealed && (
+            <button
+              className="btn ghost sm"
+              onClick={() => setRevealed((prev) => new Set(prev).add(q.id))}
+            >
+              对答案
+            </button>
+          )}
+
+          {isRevealed && (
+            <div className={`reveal ${gotIt ? 'ok' : 'bad'}`}>
+              <strong>{gotIt ? '答对了' : '答错了'}</strong>
+              <span className="muted small">
+                正确答案 {q.answer.join('')}
+                {q.explanation ? '' : ''}
+              </span>
+              {q.explanation && (
+                <div
+                  className="explain"
+                  dangerouslySetInnerHTML={{ __html: renderInline(q.explanation) }}
+                />
+              )}
+            </div>
+          )}
+
+          <p className="muted tiny">
+            {q.type === 'multiple' ? '多选题：选全才得分，可多选。' : ''}
+            <span className="kbd-hint">
+              键盘：<kbd>1</kbd>-<kbd>4</kbd> 或 <kbd>A</kbd>-<kbd>D</kbd> 选，<kbd>←</kbd>
+              <kbd>→</kbd> 切题，<kbd>F</kbd> 标记
+            </span>
+          </p>
+        </div>
 
         <div className="dots-wrap">
           <div className="dots" ref={dotsRef}>
