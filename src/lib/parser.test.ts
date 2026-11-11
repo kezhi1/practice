@@ -461,6 +461,68 @@ A. TCP B. UDP C. HTTP D. ICMP
     expect(r.questions).toHaveLength(1)
   })
 
+  it('题干里出现「版权/目录/附录」这类词时不会截断后面的题', () => {
+    const md = `## 1. 下列关于著作权法的说法，正确的是
+- A. 版权保护期一律为 50 年
+- B. 版权的取得需要登记
+
+> 答案：A
+
+## 2. 附录中对目录的说明，正确的是
+- A. 目录不参与检索
+- B. 目录必须按页码排序
+
+> 答案：B
+
+## 3. 前言和后记属于
+- A. 正文
+- B. 辅文
+> 答案：B
+
+## 4. 答案速查表的正确用法是
+- A. 先做题再查
+- B. 边做边查
+> 答案：A
+
+## 5. 解析汇总的作用是
+- A. 汇总易错点
+- B. 只列答案
+> 答案：A`
+
+    const r = ok(md)
+    expect(r.questions).toHaveLength(5)
+    expect(r.questions.map((q) => q.answer[0])).toEqual(['A', 'B', 'B', 'A', 'A'])
+  })
+
+  it('没有题号但整行就是句子时，也不当成章节结束', () => {
+    const md = `## 目录管理的实现方式
+- A. 数组
+- B. 哈希表
+> 答案：A
+
+## 2. 第二题
+- A. 对
+- B. 错
+> 答案：B`
+
+    const r = ok(md)
+    expect(r.questions).toHaveLength(2)
+    expect(r.questions[0].stem).toBe('目录管理的实现方式')
+  })
+
+  it('「附录 A 索引」这类行仍被当作章节结束', () => {
+    const md = `## 1. 一加一等于几
+- A. 1
+- B. 2
+> 答案：B
+
+## 附录 A 索引
+这是一段索引说明，不是题目。`
+
+    const r = ok(md)
+    expect(r.questions).toHaveLength(1)
+  })
+
   it('开头的开场白被忽略并给出提醒', () => {
     const md = `以下是整理后的 2 道题：
 

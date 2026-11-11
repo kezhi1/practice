@@ -26,9 +26,20 @@ function matchOption(raw: string, allowLoose: boolean): { key: string; text: str
 const JUDGE_WORDS = /^(对|错|正确|错误|是|否|√|×|✓|✗|t|f|true|false)$/i
 const LETTER_TOKEN = /^[A-Za-z]{1,6}$/
 
-/** 「答案速查表」「附录」这类标题后面整段都不算题目 */
+/** 「答案速查表」「附录」这类标题后面整段都不算题目。
+ *  只认「整行就是这类标题」的情况：题干里带这些词（`## 3. 关于版权的说法`）必须照常解析，
+ *  否则会从这一题起把后面整份文件当成噪声截断。 */
 const NOISE_HEADING_RE =
-  /^(?:参考)?答案(?:速查|汇总|表)?$|答案速查|解析汇总|附录|目录|前言|后记|版权/
+  /^(?:[（(]?[一二三四五六七八九十]+[)）、.．]\s*)?(?:附\s*录(?:\s*[A-Za-z0-9]{1,3})?(?:\s+[^\s，。？！；、：]{1,10})?(?:\s*[（(][^）)]{0,12}[)）])?|目\s*录|前\s*言|后\s*记|序\s*言|参考文献|版\s*权(?:声明|页|信息)?|(?:参考)?答\s*案(?:\s*(?:速查表?|汇总表?|表|与解析|及解析|详解|与答案解析))?|解\s*析(?:汇总|速查|详解)?)(?:\s*[:：]\s*[（(]?[^（）()]{0,12}[)）]?)?$/
+
+/** 标题行是不是「章节已结束」这类噪声标题 */
+function isNoiseHeading(text: string): boolean {
+  const t = text.trim()
+  if (!t) return false
+  // 带题号的标题一定是题目（`## 3. 关于版权的说法`），不参与噪声判断
+  if (NUMBERED_RE.test(t)) return false
+  return NOISE_HEADING_RE.test(t)
+}
 
 /** 全角字母/数字、全角空格、不换行空格统一成半角，避免 `Ａ．` 这类写法认不出 */
 function normalizeWidths(line: string): string {
@@ -132,7 +143,7 @@ function unwrapQuestionFence(text: string): { text: string; stripped: boolean; t
     ls.some((l) => {
       const h = HEADING_RE.exec(l)
       if (h) {
-        if (NOISE_HEADING_RE.test(h[2].trim())) return false
+        if (isNoiseHeading(h[2])) return false
         return h[1].length >= 2
       }
       return NUMBERED_RE.test(l)
@@ -339,7 +350,7 @@ function findStarts(lines: string[], from: number): { line: number; text: string
     const h = HEADING_RE.exec(raw)
     if (h) {
       // 「## 答案速查表」这类标题之后的内容都不是题目
-      if (NOISE_HEADING_RE.test(h[2].trim())) {
+      if (isNoiseHeading(h[2])) {
         noise = true
         section = false
         continue
